@@ -35,6 +35,7 @@ services:
     environment:
       - CUSTOM_USER=${VNC_USER:-admin}
       - PASSWORD=${VNC_PASSWORD:-ftmo24x7}
+      - WINEDLLOVERRIDES=mscoree=
     volumes:
       - ./data/mt5-wine:/config
 
