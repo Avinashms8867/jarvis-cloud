@@ -19,6 +19,18 @@ FROM ${MT5_BASE_IMAGE}
 ARG WINE_VERSION=11.10
 ARG WINE_SUITE=bookworm
 
+# The base image's WineHQ apt source points at /etc/apt/keyrings/winehq-archive.key, but that key file is
+# missing from the image (apt fails with NO_PUBKEY 76F1A20FF987672F). Re-fetch it and pin its fingerprint.
+ARG WINEHQ_KEY_FPR=D43F640145369C51D786DDEA76F1A20FF987672F
+RUN set -eux; \
+    mkdir -pm755 /etc/apt/keyrings; \
+    curl -fsSL https://dl.winehq.org/wine-builds/winehq.key -o /tmp/winehq.key; \
+    if grep -q "BEGIN PGP" /tmp/winehq.key; then gpg --dearmor < /tmp/winehq.key > /etc/apt/keyrings/winehq-archive.key; \
+    else cp /tmp/winehq.key /etc/apt/keyrings/winehq-archive.key; fi; \
+    chmod 644 /etc/apt/keyrings/winehq-archive.key; rm -f /tmp/winehq.key; \
+    gpg --show-keys --with-colons /etc/apt/keyrings/winehq-archive.key | grep -q "^fpr:.*:${WINEHQ_KEY_FPR}:" \
+      || { echo "FATAL: WineHQ key fingerprint mismatch"; exit 1; }
+
 RUN set -eux; \
     dpkg --add-architecture i386; \
     apt-get update; \
