@@ -17,8 +17,26 @@ if [ "$(printf '%s\n' 5.11 "${kernel%%-*}" | sort -V | head -n1)" != "5.11" ]; t
 fi
 echo "[1/4] Host kernel ${kernel} OK (>= 5.11)"
 
+# The Wine build needs a few GB on the Docker data disk; apt fails with "exit code 100" when it runs out.
+docker_root="$(docker info --format '{{.DockerRootDir}}' 2>/dev/null || echo /var/lib/docker)"
+free_gb="$(df -BG --output=avail "$docker_root" 2>/dev/null | tail -1 | tr -dc '0-9')"
+echo "      Free space for Docker (${docker_root}): ${free_gb:-?} GB"
+if [ -n "$free_gb" ] && [ "$free_gb" -lt 4 ]; then
+    echo "FATAL: need >= 4 GB free for the Wine build. Free space first, e.g.:"
+    echo "  docker builder prune -af"
+    echo "  docker image rm gmag11/metatrader5_vnc:latest   # old base image, replaced by :2.3"
+    echo "  docker system df                                 # see what else is using space"
+    exit 1
+fi
+
 echo "[2/4] Building avi-mt5:wine11 (replaces Wine 10.0 with winehq-devel >= 11.6)..."
-docker compose build mt5-wine
+if ! docker compose build --progress=plain mt5-wine 2>&1 | tee mt5-build.log; then
+    echo "=========================================================="
+    echo "  BUILD FAILED. apt errors from mt5-build.log:"
+    grep -nE '(^|#[0-9]+ [0-9.]+ )(E:|W:|Err:)|No space left|held|unmet|Unable to locate' mt5-build.log | tail -25 || true
+    echo "=========================================================="
+    exit 1
+fi
 
 echo "[3/4] Recreating jarvis-mt5 from the new image..."
 docker compose up -d --force-recreate mt5-wine

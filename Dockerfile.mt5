@@ -20,15 +20,18 @@ ARG WINE_VERSION=11.10
 ARG WINE_SUITE=bookworm
 
 RUN set -eux; \
+    dpkg --add-architecture i386; \
     apt-get update; \
+    apt-mark unhold $(apt-mark showhold) 2>/dev/null || true; \
     pkg="${WINE_VERSION}~${WINE_SUITE}-1"; \
+    APT="apt-get install -y --no-install-recommends --allow-downgrades --allow-change-held-packages"; \
     if apt-cache madison winehq-devel | grep -q " ${pkg} "; then \
-        apt-get install -y --no-install-recommends --allow-downgrades \
-            winehq-devel="${pkg}" wine-devel="${pkg}" wine-devel-amd64="${pkg}" wine-devel-i386:i386="${pkg}"; \
+        $APT winehq-devel="${pkg}" wine-devel="${pkg}" wine-devel-amd64="${pkg}" wine-devel-i386:i386="${pkg}"; \
     else \
         echo "WARNING: winehq-devel ${pkg} not in repo, installing newest winehq-devel"; \
-        apt-get install -y --no-install-recommends winehq-devel wine-devel wine-devel-amd64 wine-devel-i386:i386; \
+        $APT winehq-devel wine-devel wine-devel-amd64 wine-devel-i386:i386; \
     fi; \
+    apt-get clean; \
     rm -rf /var/lib/apt/lists/*; \
     v="$(wine --version | sed 's/^wine-//; s/ .*//')"; \
     echo "Installed Wine ${v}"; \
