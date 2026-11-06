@@ -1,0 +1,6 @@
+# Runtime volumes (bind-mounted by docker-compose.yml) - never part of an image build context.
+# data/mt5-wine holds the Wine prefix with files the builder cannot read.
+data/
+.git/
+*.log
+shot.png
