@@ -43,6 +43,7 @@ services:
       - ./data/mt5-wine:/config
       - ./mt5/start.sh:/Metatrader/start.sh:ro           # image start.sh; step 7 runs avi-bridge.sh
       - ./mt5/avi-bridge.sh:/Metatrader/avi-bridge.sh:ro # RPyC bridge on 64-bit Python 3.11
+      - ./mt5/avi_rpyc_server.py:/Metatrader/avi_rpyc_server.py:ro
     healthcheck:
       test: ["CMD-SHELL", "ss -tln | grep -q ':8001 '"]
       interval: 15s
