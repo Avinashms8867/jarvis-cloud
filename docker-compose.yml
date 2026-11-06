@@ -25,6 +25,10 @@ services:
     image: gmag11/metatrader5_vnc:latest
     container_name: jarvis-mt5
     restart: always
+    security_opt:
+      - seccomp:unconfined
+    cap_add:
+      - SYS_PTRACE
     ports:
       - "127.0.0.1:3000:3000"   # Web VNC to log into FTMO MT5 once via browser
       - "127.0.0.1:8001:8001"   # RPyC bridge port for mt5linux
