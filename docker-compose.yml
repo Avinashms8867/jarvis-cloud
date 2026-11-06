@@ -22,7 +22,10 @@ services:
 
   # 2. Headless Wine MetaTrader 5 + mt5linux RPyC Server (x86_64)
   mt5-wine:
-    image: gmag11/metatrader5_vnc:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.mt5   # gmag11/metatrader5_vnc + Wine >= 11.6 (fixes false "debugger found")
+    image: avi-mt5:wine11
     container_name: jarvis-mt5
     restart: always
     security_opt:

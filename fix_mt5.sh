@@ -1,36 +1,41 @@
 #!/bin/bash
-set -e
+# PROJECT AVI // MT5 RECOVERY
+# Rebuilds jarvis-mt5 on Wine >= 11.6 (see Dockerfile.mt5 for the root cause).
+# Usage:  bash fix_mt5.sh          # build + recreate + verify
+#         bash fix_mt5.sh --win11  # also set the Wine prefix to Windows 11 (fallback if the error persists)
+set -euo pipefail
 
 echo "=========================================================="
-echo "  PROJECT AVI // AUTONOMOUS MT5 CLOUD RECOVERY SCRIPT     "
+echo "  PROJECT AVI // MT5 RECOVERY (Wine >= 11.6)"
 echo "=========================================================="
 
-# 1. Recreate mt5-wine container with full capabilities
-echo "[1/5] Recreating jarvis-mt5 container with SYS_PTRACE and WINEDLLOVERRIDES..."
+# Wine's syscall emulation uses Linux Syscall User Dispatch: kernel >= 5.11 required.
+kernel="$(uname -r)"
+if [ "$(printf '%s\n' 5.11 "${kernel%%-*}" | sort -V | head -n1)" != "5.11" ]; then
+    echo "FATAL: host kernel ${kernel} < 5.11; Wine cannot emulate MT5's direct syscalls here."
+    exit 1
+fi
+echo "[1/4] Host kernel ${kernel} OK (>= 5.11)"
+
+echo "[2/4] Building avi-mt5:wine11 (replaces Wine 10.0 with winehq-devel >= 11.6)..."
+docker compose build mt5-wine
+
+echo "[3/4] Recreating jarvis-mt5 from the new image..."
 docker compose up -d --force-recreate mt5-wine
+sleep 5
+docker exec jarvis-mt5 wine --version
 
-# Wait 3 seconds for container to spin up
-sleep 3
+if [ "${1:-}" = "--win11" ]; then
+    echo "      Setting Wine prefix Windows version to win11..."
+    docker exec -u abc -e WINEPREFIX=/config/.wine jarvis-mt5 \
+        wine reg add 'HKCU\Software\Wine' /v Version /t REG_SZ /d win11 /f
+    docker compose restart mt5-wine
+fi
 
-# 2. Patch start.sh inside container to use Wine RPyC server
-echo "[2/5] Patching /Metatrader/start.sh for RPyC bridge..."
-docker exec jarvis-mt5 sed -i 's/python3 -m mt5linux.*python.exe \&/$wine_executable python -m rpyc.cli.rpyc_classic --host 0.0.0.0 -p $mt5server_port \&/' /Metatrader/start.sh
-
-# 3. Install mt5linux 0.1.9 without broken dependencies
-echo "[3/5] Installing mt5linux 0.1.9 in Linux environment..."
-docker exec jarvis-mt5 pip install --break-system-packages --no-cache-dir --no-deps mt5linux==0.1.9 || true
-
-# 4. Install Wine-Staging 11.10 (Fixes WineHQ Bug 58043 anti-debug check)
-echo "[4/5] Upgrading to Wine-Staging 11.10 (Upstream Anti-Debug Bypass)..."
-docker exec jarvis-mt5 bash -c "apt-get update && apt-get install --allow-downgrades -y winehq-staging wine-staging wine-staging-amd64 wine-staging-i386"
-
-# 5. Fix permissions and restart mt5-wine
-echo "[5/5] Normalizing /config permissions and restarting MT5..."
-docker exec jarvis-mt5 chown -R abc:abc /config || true
-docker compose restart mt5-wine
-
-echo "=========================================================="
-echo "  RECOVERY COMPLETE! Container logs:"
-echo "=========================================================="
+echo "[4/4] Container logs:"
 sleep 5
 docker logs jarvis-mt5 --tail 20
+echo "=========================================================="
+echo "  Open http://localhost:3000 - terminal64.exe should start without the debugger dialog."
+echo "  If it still appears: bash fix_mt5.sh --win11"
+echo "=========================================================="

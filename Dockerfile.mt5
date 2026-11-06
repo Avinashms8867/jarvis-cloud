@@ -1,0 +1,41 @@
+# ============================================================
+# PROJECT AVI // MT5 under Wine >= 11.6 (fixes "A debugger has been found running in your system")
+#
+# Root cause: current terminal64.exe builds have a protection layer that makes DIRECT syscalls
+# with hardcoded Windows syscall numbers. Wine < 11.6 cannot intercept syscalls issued outside
+# its own ntdll, so they hit the Linux kernel as garbage and the protector concludes a debugger
+# is attached. Wine 11.6 added syscall emulation via Linux Syscall User Dispatch
+# (WineHQ bug 58043, closed FIXED in 11.6). Needs host kernel >= 5.11.
+#
+# The base image ships winehq-stable 10.0, which current MT5 builds reject. Replace it with
+# winehq-devel. Done at BUILD time so it survives container recreation (docker exec apt installs do not).
+# ============================================================
+
+ARG MT5_BASE_IMAGE=gmag11/metatrader5_vnc:2.3
+FROM ${MT5_BASE_IMAGE}
+
+# 11.10 is the devel release the vigie-mt5-image project validated with MT5. If that exact version is
+# no longer in the WineHQ repo, the newest winehq-devel is used instead. The build fails if the result is < 11.6.
+ARG WINE_VERSION=11.10
+ARG WINE_SUITE=bookworm
+
+RUN set -eux; \
+    apt-get update; \
+    pkg="${WINE_VERSION}~${WINE_SUITE}-1"; \
+    if apt-cache madison winehq-devel | grep -q " ${pkg} "; then \
+        apt-get install -y --no-install-recommends --allow-downgrades \
+            winehq-devel="${pkg}" wine-devel="${pkg}" wine-devel-amd64="${pkg}" wine-devel-i386:i386="${pkg}"; \
+    else \
+        echo "WARNING: winehq-devel ${pkg} not in repo, installing newest winehq-devel"; \
+        apt-get install -y --no-install-recommends winehq-devel wine-devel wine-devel-amd64 wine-devel-i386:i386; \
+    fi; \
+    rm -rf /var/lib/apt/lists/*; \
+    v="$(wine --version | sed 's/^wine-//; s/ .*//')"; \
+    echo "Installed Wine ${v}"; \
+    dpkg --compare-versions "${v}" ge 11.6 || { echo "FATAL: Wine ${v} < 11.6 cannot run current MT5 builds"; exit 1; }
+
+# Bake in the RPyC/mt5linux patches that fix_mt5.sh used to apply with `docker exec`
+# (those were lost every time the container was recreated).
+RUN sed -i 's/python3 -m mt5linux.*python.exe \&/$wine_executable python -m rpyc.cli.rpyc_classic --host 0.0.0.0 -p $mt5server_port \&/' /Metatrader/start.sh \
+    && (grep -q "rpyc_classic" /Metatrader/start.sh || echo "WARNING: start.sh RPyC patch did not match this base image") \
+    && pip install --break-system-packages --no-cache-dir --no-deps mt5linux==0.1.9
