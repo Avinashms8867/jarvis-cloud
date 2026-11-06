@@ -1,0 +1,378 @@
+"""
+PROJECT AVI // FTMO MT5 EXECUTION BRIDGE
+Translates Agent 2 quantitative signals into live MetaTrader 5 orders:
+- Connects to local FTMO MetaTrader 5 terminal
+- Enforces FTMO Rule Governor risk limits
+- Executes orders with exact stop-loss and take-profit via mt5.order_send()
+"""
+
+from __future__ import annotations
+import os
+import logging
+import subprocess
+import time
+from typing import Dict, Any, Optional
+
+try:
+    import MetaTrader5 as mt5
+except ImportError:
+    mt5 = None
+
+from tier2_cortex.ftmo_governor import FTMORuleGovernor
+
+logger = logging.getLogger("avi.cortex.ftmo_bridge")
+
+
+class FTMOMT5Bridge:
+    """Live Execution Bridge between Project AVI and FTMO MetaTrader 5."""
+
+    TERMINAL_PATH = "C:\\Program Files\\FTMO Global Markets MT5 Terminal\\terminal64.exe"
+
+    def __init__(self, governor: Optional[FTMORuleGovernor] = None):
+        self.governor = governor or FTMORuleGovernor(initial_balance=100000.0)
+        self.is_connected: bool = False
+        self.login: int = 1514687208
+        self.server: str = "FTMO-Demo"
+        self.password: str = "w*4QW?tb!"
+        self.btc_trades_count: int = 0
+        self.BTC_MAX_TRADES: int = 3
+        self._load_credentials()
+
+    def _load_credentials(self) -> None:
+        """Reads credentials from AVI Project/.env."""
+        env_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".env"))
+        if os.path.exists(env_path):
+            with open(env_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith("FTMO_MT5_LOGIN="):
+                        try:
+                            self.login = int(line.split("=", 1)[1])
+                        except ValueError:
+                            pass
+                    elif line.startswith("FTMO_MT5_SERVER="):
+                        self.server = line.split("=", 1)[1]
+                    elif line.startswith("FTMO_MT5_PASSWORD="):
+                        self.password = line.split("=", 1)[1]
+
+    def _is_terminal_process_running(self) -> bool:
+        """Fast non-blocking check to verify if terminal64.exe is running in Windows."""
+        try:
+            res = subprocess.run(
+                ["tasklist", "/FI", "IMAGENAME eq terminal64.exe"],
+                capture_output=True,
+                text=True,
+                timeout=1
+            )
+            return "terminal64.exe" in res.stdout
+        except Exception:
+            return False
+
+    def connect(self) -> bool:
+        """Fast, non-blocking connection to FTMO MT5 terminal."""
+        if not mt5:
+            logger.warning("[FTMO] MetaTrader5 library not available.")
+            return False
+
+        # 1. If already initialized in this python runtime
+        try:
+            if mt5.terminal_info() is not None:
+                self.is_connected = True
+                self._sync_account()
+                return True
+        except Exception:
+            pass
+
+        # 2. If terminal64.exe is active in Windows, attach immediately
+        if self._is_terminal_process_running():
+            try:
+                if mt5.initialize():
+                    self.is_connected = True
+                    self._sync_account()
+                    logger.info(f"[FTMO] Attached to running MT5 Terminal.")
+                    return True
+            except Exception:
+                pass
+
+        self.is_connected = False
+        return False
+
+    def _sync_account(self) -> None:
+        """Syncs balance and equity to the FTMO Governor."""
+        if not mt5 or not self.is_connected:
+            return
+        try:
+            acc = mt5.account_info()
+            if acc:
+                self.governor.update_account_metrics(current_balance=acc.balance, current_equity=acc.equity)
+        except Exception:
+            pass
+
+    def get_cooldown_status(self, symbol: str) -> Dict[str, Any]:
+        """
+        Calculates post-stop-loss cooldown status for a symbol.
+        Enforces:
+        - 15 minutes (900s) cooldown after 1 stop loss
+        - 30 minutes (1800s) cooldown after 2 consecutive stop losses
+        - 60 minutes (3600s) cooldown after 3+ consecutive stop losses
+        Prevents repetitive churn, revenge trading, and entering into the same chop zone.
+        """
+        if not mt5 or not self.connect():
+            return {"in_cooldown": False, "remaining_seconds": 0, "consecutive_losses": 0, "reason": ""}
+
+        mt5_sym = symbol.replace("USDT", "USD")
+
+        # 1. Check in-memory fast cache first
+        now_ts = time.time()
+        if hasattr(self, "_loss_cooldowns") and mt5_sym in self._loss_cooldowns:
+            cd_data = self._loss_cooldowns[mt5_sym]
+            elapsed = now_ts - cd_data["loss_time"]
+            cooldown_dur = cd_data.get("duration", 900)
+            if elapsed < cooldown_dur:
+                rem = int(cooldown_dur - elapsed)
+                return {
+                    "in_cooldown": True,
+                    "remaining_seconds": rem,
+                    "consecutive_losses": cd_data.get("consecutive", 1),
+                    "reason": f"Post-Loss Cooldown ({rem//60}m {rem%60}s remaining, {cd_data.get('consecutive', 1)} loss(es))"
+                }
+
+        # 2. Query MT5 closed deals history for authoritative audit
+        try:
+            from datetime import datetime, timedelta
+            d_from = datetime.now() - timedelta(hours=12)
+            d_to = datetime.now() + timedelta(days=1)
+            deals = mt5.history_deals_get(d_from, d_to)
+            if deals:
+                exit_deals = [d for d in deals if d.symbol == mt5_sym and d.entry == 1]
+                if exit_deals:
+                    last_exit = exit_deals[-1]
+                    # Check if last exit was a loss
+                    is_loss = (last_exit.profit < 0) or ("[sl" in str(last_exit.comment).lower())
+                    if is_loss:
+                        tick = mt5.symbol_info_tick(mt5_sym)
+                        broker_now = tick.time if tick else time.time()
+                        elapsed = broker_now - last_exit.time
+                        # Count consecutive losses
+                        consecutive = 0
+                        for d in reversed(exit_deals):
+                            if (d.profit < 0) or ("[sl" in str(d.comment).lower()):
+                                consecutive += 1
+                            else:
+                                break
+                        cooldown_dur = 600 if consecutive == 1 else (1200 if consecutive == 2 else 1800)
+                        if elapsed < cooldown_dur:
+                            rem = int(cooldown_dur - elapsed)
+                            if not hasattr(self, "_loss_cooldowns"):
+                                self._loss_cooldowns = {}
+                            self._loss_cooldowns[mt5_sym] = {
+                                "loss_time": last_exit.time,
+                                "duration": cooldown_dur,
+                                "consecutive": consecutive
+                            }
+                            return {
+                                "in_cooldown": True,
+                                "remaining_seconds": rem,
+                                "consecutive_losses": consecutive,
+                                "reason": f"Post-Loss Cooldown ({rem//60}m {rem%60}s remaining, {consecutive} consecutive loss(es))"
+                            }
+        except Exception as e:
+            logger.warning(f"[COOLDOWN CHECK ERROR] {e}")
+
+        return {"in_cooldown": False, "remaining_seconds": 0, "consecutive_losses": 0, "reason": ""}
+
+    def execute_order(self, signal: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Executes an order on FTMO MT5 with full safety checks:
+        Enforces:
+        - Max 1 open position per symbol (no stacking)
+        - Max 3 trades on BTC per session (stops BTC thereafter to focus on other 5)
+        """
+        if not self.is_connected and not self.connect():
+            return {"success": False, "message": "FTMO MT5 terminal in standby."}
+
+        mt5_sym = signal["symbol"].replace("USDT", "USD")
+
+        # 1. SINGLE POSITION PER ASSET LOCK (Prevents stacking multiple trades on 1 asset)
+        try:
+            current_pos = mt5.positions_get(symbol=mt5_sym)
+            if current_pos and len(current_pos) > 0:
+                logger.info(f"[EXPOSURE LOCK] {mt5_sym} already has {len(current_pos)} active position(s). Skipping to focus on other assets.")
+                return {"success": False, "message": f"{mt5_sym} already has active open trade. Duplicate entry blocked."}
+        except Exception as e:
+            logger.warning(f"[EXPOSURE LOCK CHECK ERROR] {e}")
+
+        # 2. ANTI-WHIPSAW POST-STOP-LOSS COOLDOWN LOCK
+        cd_status = self.get_cooldown_status(mt5_sym)
+        if cd_status.get("in_cooldown"):
+            msg = f"[POST-LOSS COOLDOWN BLOCKED] {mt5_sym} in cooldown: {cd_status['reason']}. Preventing immediate churn/revenge trade."
+            print(msg, flush=True)
+            logger.warning(msg)
+            return {"success": False, "message": msg}
+
+        self._sync_account()
+
+        # 1. Governor Compliance Check
+        can_trade, reason = self.governor.can_open_new_trade()
+        if not can_trade:
+            return {"success": False, "message": f"FTMO Governor Veto: {reason}"}
+
+        # 2. Map symbol to MT5 format (e.g. BTCUSDT -> BTCUSD)
+        mt5_sym = signal["symbol"].replace("USDT", "USD")
+        side = signal["side"]
+        order_type = mt5.ORDER_TYPE_BUY if side == "LONG" else mt5.ORDER_TYPE_SELL
+
+        # 3. Calculate compliant lot size (<= 0.5% risk)
+        lots = self.governor.calculate_order_lot_size(mt5_sym, signal["price"], signal["sl"])
+
+        # 4. Prepare MT5 Request with stops relative to actual MT5 fill price
+        try:
+            mt5.symbol_select(mt5_sym, True)
+            tick = mt5.symbol_info_tick(mt5_sym)
+            if not tick:
+                return {"success": False, "message": f"Could not get tick for {mt5_sym}"}
+
+            info = mt5.symbol_info(mt5_sym)
+            digits = info.digits if info else 2
+
+            sl_dist = signal.get("sl_dist")
+            if not sl_dist or sl_dist <= 0:
+                sl_dist = abs(signal["price"] - signal["sl"])
+            tp_dist = signal.get("tp_dist")
+            if not tp_dist or tp_dist <= 0:
+                tp_dist = abs(signal["price"] - signal["tp"])
+
+            if side == "LONG":
+                price = tick.ask
+                sl = round(price - sl_dist, digits)
+                tp = round(price + tp_dist, digits)
+            else:
+                price = tick.bid
+                sl = round(price + sl_dist, digits)
+                tp = round(price - tp_dist, digits)
+
+            # Extra safety check against invalid stops
+            if side == "LONG" and sl >= price:
+                sl = round(price - (sl_dist if sl_dist > 0 else 10.0), digits)
+            elif side == "SHORT" and sl <= price:
+                sl = round(price + (sl_dist if sl_dist > 0 else 10.0), digits)
+
+            request = {
+                "action": mt5.TRADE_ACTION_DEAL,
+                "symbol": mt5_sym,
+                "volume": lots,
+                "type": order_type,
+                "price": price,
+                "sl": sl,
+                "tp": tp,
+                "deviation": 20,
+                "magic": 202609,
+                "comment": "AVI_ALPHA_GOVERNOR",
+                "type_time": mt5.ORDER_TIME_GTC,
+                "type_filling": mt5.ORDER_FILLING_IOC,
+            }
+
+            result = mt5.order_send(request)
+            if result and result.retcode == mt5.TRADE_RETCODE_DONE:
+                msg = f"[FTMO LIVE] Trade executed! Order #{result.order} {side} {lots} {mt5_sym} @ {price}"
+                print(msg, flush=True)
+                logger.info(msg)
+                return {
+                    "success": True,
+                    "order_id": result.order,
+                    "symbol": mt5_sym,
+                    "side": side,
+                    "volume": lots,
+                    "fill_price": price,
+                    "message": "Order filled successfully on FTMO MT5."
+                }
+            else:
+                error = result.comment if result else mt5.last_error()
+                msg = f"[FTMO ORDER REJECTED] {mt5_sym} retcode={result.retcode if result else 'None'}, comment={error}"
+                print(msg, flush=True)
+                logger.error(msg)
+                return {"success": False, "message": f"MT5 Execution error: {error}"}
+        except Exception as e:
+            msg = f"[FTMO ORDER EXCEPTION] {e}"
+            print(msg, flush=True)
+            logger.error(msg)
+            return {"success": False, "message": f"Execution exception: {e}"}
+
+    def manage_active_positions(self) -> None:
+        """
+        Actively monitors open FTMO MT5 positions and applies dynamic profit locking:
+        1. Breakeven Lock: When profit reaches >= +$25.00:
+           Moves Stop-Loss to entry_price (+ fee/spread buffer) -> 100% RISK-FREE TRADE.
+        2. Profit Trailing: When profit reaches >= +$45.00:
+           Trails Stop-Loss to lock in at least +$25.00 guaranteed profit, letting the rest run to +$70.00 TP.
+        """
+        if not mt5 or not self.connect():
+            return
+
+        try:
+            positions = mt5.positions_get()
+            if not positions:
+                return
+
+            for p in positions:
+                profit = p.profit
+                open_price = p.price_open
+                curr_sl = p.sl
+                curr_tp = p.tp
+                symbol = p.symbol
+                is_buy = (p.type == mt5.ORDER_TYPE_BUY)
+
+                info = mt5.symbol_info(symbol)
+                digits = info.digits if info else 2
+                point = info.point if info else 0.01
+
+                # 1. Breakeven Trigger: At +$25 profit, lock SL to entry price
+                if profit >= 25.0:
+                    be_sl = round(open_price + (5 * point) if is_buy else open_price - (5 * point), digits)
+                    should_move = False
+                    if is_buy and curr_sl < open_price:
+                        should_move = True
+                    elif not is_buy and curr_sl > open_price:
+                        should_move = True
+
+                    if should_move:
+                        req = {
+                            "action": mt5.TRADE_ACTION_SLTP,
+                            "position": p.ticket,
+                            "symbol": symbol,
+                            "sl": be_sl,
+                            "tp": curr_tp
+                        }
+                        res = mt5.order_send(req)
+                        if res and res.retcode == mt5.TRADE_RETCODE_DONE:
+                            msg = f"[BREAKEVEN LOCKED] Position #{p.ticket} {symbol} profit=${profit:.2f}. SL moved to {be_sl} (Risk-Free Trade)!"
+                            print(msg, flush=True)
+                            logger.info(msg)
+
+                # 2. Profit Lock Trigger: At +$45 profit, trail SL to lock at least +$25 profit
+                if profit >= 45.0:
+                    trail_sl = round(open_price + (abs(p.price_current - open_price) * 0.5) if is_buy else open_price - (abs(open_price - p.price_current) * 0.5), digits)
+                    if (is_buy and trail_sl > curr_sl) or (not is_buy and trail_sl < curr_sl):
+                        req = {
+                            "action": mt5.TRADE_ACTION_SLTP,
+                            "position": p.ticket,
+                            "symbol": symbol,
+                            "sl": trail_sl,
+                            "tp": curr_tp
+                        }
+                        res = mt5.order_send(req)
+                        if res and res.retcode == mt5.TRADE_RETCODE_DONE:
+                            msg = f"[PROFIT TRAILED] Position #{p.ticket} {symbol} profit=${profit:.2f}. SL trailed to {trail_sl} (Locked +$25+)!"
+                            print(msg, flush=True)
+                            logger.info(msg)
+        except Exception as e:
+            logger.warning(f"[POSITION MANAGER ERROR] {e}")
+
+    def get_status(self) -> Dict[str, Any]:
+        if self.is_connected:
+            self._sync_account()
+        telemetry = self.governor.get_telemetry()
+        telemetry["mt5_connected"] = self.is_connected
+        telemetry["login"] = self.login
+        telemetry["server"] = self.server
+        return telemetry

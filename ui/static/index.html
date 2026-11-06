@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PROJECT AVI // Alpha Observatory</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="dark-theme">
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-badge">AVI</div>
+        <div class="brand-text">
+          <h2>PROJECT AVI</h2>
+          <span class="subtext">Alpha Quantitative Engine</span>
+        </div>
+      </div>
+
+      <div class="nav-section-title">COGNITIVE TIERS</div>
+      <nav class="nav-list">
+        <button class="nav-item active" data-tab="tabThinking" id="navThinking">
+          <span class="nav-icon">🧠</span>
+          <span class="nav-label">Agent 2: Thinking Core</span>
+          <span class="status-dot pulsing"></span>
+        </button>
+        <button class="nav-item" data-tab="tabChat" id="navChat">
+          <span class="nav-icon">💬</span>
+          <span class="nav-label">Agent 1: Assistant</span>
+        </button>
+        <button class="nav-item" data-tab="tabSwarm" id="navSwarm">
+          <span class="nav-icon">🧬</span>
+          <span class="nav-label">Agent 3: Swarm Engine</span>
+          <span class="badge live" id="swarmGenBadge">Gen 1</span>
+        </button>
+      </nav>
+
+      <div class="nav-section-title">FTMO & MACRO</div>
+      <nav class="nav-list">
+        <button class="nav-item" data-tab="tabFTMO" id="navFTMO">
+          <span class="nav-icon">🏆</span>
+          <span class="nav-label">FTMO $100k Challenge</span>
+          <span class="badge success" id="ftmoStatusBadge">LIVE MT5</span>
+        </button>
+        <button class="nav-item" data-tab="tabReports" id="navReports">
+          <span class="nav-icon">📊</span>
+          <span class="nav-label">30-Min Overnight Reports</span>
+          <span class="badge live" id="sidebarReportsBadge">Live Ledger</span>
+        </button>
+        <button class="nav-item" data-tab="tabMacro" id="navMacro">
+          <span class="nav-icon">📡</span>
+          <span class="nav-label">Macro Catalyst Radar</span>
+          <span class="badge success" id="sidebarMacroBadge">LOW RISK</span>
+        </button>
+        <button class="nav-item" data-tab="tabMemory" id="navMemory">
+          <span class="nav-icon">🕸️</span>
+          <span class="nav-label">Dual Neo4j Graph</span>
+        </button>
+        <button class="nav-item" data-tab="tabSpecs" id="navSpecs">
+          <span class="nav-icon">⚙️</span>
+          <span class="nav-label">Alpha Architecture</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="db-status-pill" id="dbStatusPill">
+          <span class="pill-dot"></span>
+          <span class="pill-text">Neo4j Active-Active</span>
+        </div>
+        <div class="time-display" id="liveClock">00:00:00</div>
+      </div>
+    </aside>
+
+    <!-- Main Workspace -->
+    <main class="main-content">
+      <!-- Topbar -->
+      <header class="topbar">
+        <div class="view-header">
+          <h1 id="currentViewTitle">Agent 2 // Multi-Timeframe Thinking Core</h1>
+          <p id="currentViewSubtitle">Enforcing 1-Hour Trend Alignment, ATR Volatility Discipline, and Breakeven Trailing Stops.</p>
+        </div>
+        <div class="topbar-actions">
+          <div class="badge-group">
+            <span class="metric-pill" id="ftmoTopPill"><small>FTMO MT5</small> <strong class="text-success" id="ftmoTopEquity">$100,000.00</strong></span>
+            <span class="metric-pill" id="macroTopPill"><small>MACRO</small> <strong class="text-success" id="macroRiskText">LOW RISK</strong></span>
+            <span class="metric-pill"><small>COGITATION</small> <strong id="topbarStep">Step 1</strong></span>
+          </div>
+        </div>
+      </header>
+
+      <!-- View Container -->
+      <div class="view-container">
+
+        <!-- VIEW 1: AGENT 2 THINKING (DEFAULT) -->
+        <section id="tabThinking" class="view-panel active">
+          <!-- Portfolio Metrics Ribbon -->
+          <div class="metrics-ribbon">
+            <div class="ribbon-card">
+              <span class="ribbon-label">FTMO Equity ($100k Account)</span>
+              <span class="ribbon-value text-success" id="cardFtmoEquity">$100,000.00</span>
+              <span class="ribbon-hint">Login: #1514687208 (FTMO-Demo)</span>
+            </div>
+            <div class="ribbon-card">
+              <span class="ribbon-label">Daily Drawdown (Max 5%)</span>
+              <span class="ribbon-value" id="cardFtmoDailyLoss">0.00%</span>
+              <span class="ribbon-hint">Circuit breaker buffer at 3.8%</span>
+            </div>
+            <div class="ribbon-card">
+              <span class="ribbon-label">Total Drawdown (Max 10%)</span>
+              <span class="ribbon-value" id="cardFtmoTotalLoss">0.00%</span>
+              <span class="ribbon-hint">Hard ceiling at 8.5%</span>
+            </div>
+            <div class="ribbon-card">
+              <span class="ribbon-label">Profit Target Progress</span>
+              <span class="ribbon-value text-accent" id="cardFtmoTarget">0.00% / +10%</span>
+              <span class="ribbon-hint">Target: +$10,000.00 to pass</span>
+            </div>
+          </div>
+
+          <!-- Live Thinking Stream -->
+          <div class="panel-layout-grid">
+            <div class="stream-column">
+              <div class="section-banner">
+                <div class="banner-title">
+                  <span class="banner-icon">💭</span>
+                  <h3>Claude-Style Internal Monologue Stream</h3>
+                </div>
+                <span class="stream-pulse">Real-time Cogitation (10s)</span>
+              </div>
+              <div class="thinking-stream-container" id="thinkingStreamContainer">
+                <div class="thought-loading">
+                  <div class="spinner"></div>
+                  <span>Agent 2 is observing 1h macro trend & 5m Binance candles...</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Active Signals & Positions Column -->
+            <div class="signals-column">
+              <div class="section-banner">
+                <div class="banner-title">
+                  <span class="banner-icon">🎯</span>
+                  <h3>FTMO MT5 Order Desk</h3>
+                </div>
+              </div>
+              <div class="positions-card">
+                <h4>Active Open Positions (Breakeven & Trailing)</h4>
+                <div id="openPositionsContainer" class="positions-list">
+                  <div class="empty-state">No open positions. Risk Governor standing down in chop.</div>
+                </div>
+              </div>
+
+              <div class="positions-card mt-3">
+                <h4>Recent Closed Trades (Post-Fee PnL)</h4>
+                <div id="recentTradesContainer" class="positions-list">
+                  <div class="empty-state">No closed trades yet.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 2: FTMO $100K LIVE CHALLENGE -->
+        <section id="tabFTMO" class="view-panel">
+          <div class="memory-grid">
+            <div class="memory-status-card">
+              <h3>FTMO $100,000 Free Trial 2-Step Live Monitor</h3>
+              <div class="neo4j-nodes-row">
+                <div class="db-node-card">
+                  <h4>FTMO Account Details</h4>
+                  <p class="status-text font-bold" id="ftmoLoginText">#1514687208</p>
+                  <small>Server: FTMO-Demo | Platform: MT5</small>
+                </div>
+                <div class="db-node-card">
+                  <h4>Current Balance</h4>
+                  <p class="status-text text-success font-bold" id="ftmoBalanceText">$100,000.00 USD</p>
+                  <small>Leverage: 1:100</small>
+                </div>
+                <div class="db-node-card">
+                  <h4>Governor Status</h4>
+                  <p class="status-text text-success" id="ftmoGovStatus">FTMO_COMPLIANT_ACTIVE</p>
+                  <small>0.5% Risk Sizing Enforced</small>
+                </div>
+              </div>
+            </div>
+
+            <div class="memory-status-card mt-3">
+              <h3>Challenge Rule Limits & Pass Criteria</h3>
+              <div class="graph-metrics-row">
+                <div class="graph-metric"><span id="ftmoDailyLossDisplay">0.00%</span><label>Daily Loss (Max 5.0%)</label></div>
+                <div class="graph-metric"><span id="ftmoTotalLossDisplay">0.00%</span><label>Total Drawdown (Max 10.0%)</label></div>
+                <div class="graph-metric"><span id="ftmoProfitDisplay">0.00%</span><label>Target (+10.0% / $10,000)</label></div>
+              </div>
+              <div class="position-item mt-3">
+                <strong>Safety Execution Rules:</strong>
+                <p class="text-muted" style="font-size: 11px;">
+                  1. Automatic Breakeven at +1.0R eliminates downside.<br>
+                  2. Trailing Stop locks +1.2R at +2.0R excursion.<br>
+                  3. 3.8% Daily Drawdown emergency circuit breaker prevents breaching FTMO's 5% rule.<br>
+                  4. Maximum lot size dynamically capped at 0.5% equity risk per position.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 3: CHAT ASSISTANT -->
+        <section id="tabChat" class="view-panel">
+          <div class="chat-container">
+            <div class="chat-history" id="chatHistory">
+              <div class="message-row avi">
+                <div class="msg-avatar">AVI</div>
+                <div class="msg-content">
+                  <p><strong>Greetings. I am Agent 1.</strong> Directly linked to your <strong>$100k FTMO MT5 Challenge</strong>, Agent 2's thinking core, Agent 3's swarm, and the live Macro Catalyst Radar.</p>
+                  <p class="text-muted">Ask me about current FTMO account equity, daily drawdown %, trade setups, or macro funding rates.</p>
+                </div>
+              </div>
+            </div>
+            <div class="chat-input-row">
+              <input type="text" id="chatInput" placeholder="Ask Agent 1 about FTMO account equity, live thinking, or strategy leaderboards..." />
+              <button id="sendChatBtn" class="btn primary">Send</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 4: SWARM STRATEGY TOURNAMENT -->
+        <section id="tabSwarm" class="view-panel">
+          <div class="table-container">
+            <div class="table-header-row">
+              <h3>Agent 3: Multi-Strategy Evolutionary Population (0.05% Taker Fees Deducted)</h3>
+              <span class="table-meta" id="swarmPopMeta">30 Agents Active</span>
+            </div>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Agent ID</th>
+                  <th>Asset</th>
+                  <th>Model Archetype</th>
+                  <th>Genetic DNA Parameters</th>
+                  <th>Trades</th>
+                  <th>Win Rate</th>
+                  <th>Profit Factor</th>
+                  <th>Net Exp ($/t)</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="swarmTableBody">
+                <tr><td colspan="9" class="text-center">Loading Swarm population...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- VIEW 5: MACRO CATALYST RADAR -->
+        <section id="tabMacro" class="view-panel">
+          <div class="memory-grid">
+            <div class="memory-status-card">
+              <h3>Live Binance USD-M Perpetual Funding Rates</h3>
+              <div class="neo4j-nodes-row">
+                <div class="db-node-card">
+                  <h4>BTCUSDT Perpetual</h4>
+                  <p class="status-text font-bold" id="rateBTC">+0.010%</p>
+                  <small>Normal institutional baseline</small>
+                </div>
+                <div class="db-node-card">
+                  <h4>ETHUSDT Perpetual</h4>
+                  <p class="status-text font-bold" id="rateETH">+0.005%</p>
+                  <small>Balanced delta flow</small>
+                </div>
+                <div class="db-node-card">
+                  <h4>SOLUSDT Perpetual</h4>
+                  <p class="status-text font-bold" id="rateSOL">+0.010%</p>
+                  <small>Balanced delta flow</small>
+                </div>
+              </div>
+            </div>
+
+            <div class="memory-status-card mt-3">
+              <h3>Systemic Macro Assessment & Tail-Risk Veto</h3>
+              <div class="graph-metrics-row">
+                <div class="graph-metric"><span id="macroScoreDisplay">25.0</span><label>Macro Risk Score</label></div>
+                <div class="graph-metric"><span id="macroVerdictDisplay">AUTHORIZED</span><label>Trade Permission</label></div>
+                <div class="graph-metric"><span id="macroRiskLevelDisplay">LOW_RISK</span><label>Risk Regime</label></div>
+              </div>
+              <div class="position-item mt-3">
+                <strong>Event Status Summary:</strong>
+                <p class="text-muted" id="macroEventStatus">No high-impact economic prints in current 4-hour window.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 6: DUAL NEO4J GRAPH -->
+        <section id="tabMemory" class="view-panel">
+          <div class="memory-grid">
+            <div class="memory-status-card">
+              <h3>Dual Graph Replication Status</h3>
+              <div class="neo4j-nodes-row">
+                <div class="db-node-card">
+                  <h4>Local Neo4j</h4>
+                  <p class="status-text text-success" id="statusLocal">bolt://127.0.0.1:7687</p>
+                  <small>Sub-millisecond local reads/writes</small>
+                </div>
+                <div class="db-node-card">
+                  <h4>Cloud Neo4j AuraDB</h4>
+                  <p class="status-text text-muted" id="statusCloud">Pending configuration</p>
+                  <small>Remote replication & disaster recovery</small>
+                </div>
+                <div class="db-node-card">
+                  <h4>In-Memory Mirror</h4>
+                  <p class="status-text text-success">Active (100% Zero-Crash Fallback)</p>
+                  <small>Instant associative retrieval</small>
+                </div>
+              </div>
+            </div>
+
+            <div class="memory-status-card mt-3">
+              <h3>Associative Knowledge Graph Snapshot</h3>
+              <div class="graph-metrics-row">
+                <div class="graph-metric"><span id="graphTotalNodes">0</span><label>Mapped Nodes</label></div>
+                <div class="graph-metric"><span id="graphTotalEdges">0</span><label>Relational Edges</label></div>
+                <div class="graph-metric"><span id="graphTotalThoughts">0</span><label>Saved Thoughts</label></div>
+              </div>
+              <div class="recent-memories-list" id="recentMemoriesList">
+                <p class="text-muted">Loading associative memories from Dual Neo4j...</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 7: SPECS & ARCHITECTURE -->
+        <section id="tabSpecs" class="view-panel">
+          <div class="specs-card">
+            <h2>Project AVI Alpha Architecture & Winning Edge Constraints</h2>
+            <div class="specs-grid">
+              <div class="spec-box">
+                <h4>1. Multi-Timeframe Trend Law</h4>
+                <p>1-Hour trend direction is supreme. Longs are strictly forbidden in 1h downtrends; shorts are strictly forbidden in 1h uptrends.</p>
+              </div>
+              <div class="spec-box">
+                <h4>2. Strict Friction Auditing</h4>
+                <p>Every backtest and paper trade deducts 0.05% taker fees each way (0.10% round trip). No fake or fragile edge can survive.</p>
+              </div>
+              <div class="spec-box">
+                <h4>3. Breakeven & Trailing Stops</h4>
+                <p>When profit reaches +1.0R, stop moves immediately to Breakeven (+0.1R). When profit reaches +2.0R, trailing stop locks +1.2R.</p>
+              </div>
+              <div class="spec-box">
+                <h4>4. FTMO Rule Governor</h4>
+                <p>Guarantees zero breach of FTMO's 5% daily drawdown and 10% total loss rules via a 3.8% emergency circuit breaker.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- VIEW 8: 30-MIN OVERNIGHT EXECUTIVE REPORTS -->
+        <section id="tabReports" class="view-panel">
+          <div class="reports-container">
+            <div class="reports-header-card">
+              <div class="reports-header-left">
+                <div class="reports-title-row">
+                  <span class="live-dot-indicator pulsing"></span>
+                  <h2>FTMO 30-Minute Overnight Executive Ledger</h2>
+                  <span class="badge success">LIVE MT5 LINKED</span>
+                </div>
+                <p class="reports-subtitle">Chronological 30-minute audit snapshots tracking live FTMO equity, micro-scalp executions, risk guardrail compliance, and Agent 2 cognitive decisions.</p>
+              </div>
+              <div class="reports-header-stats">
+                <div class="stat-box">
+                  <span class="stat-box-label">FTMO Live Equity</span>
+                  <span class="stat-box-val text-success" id="repLiveEquity">$99,977.43</span>
+                </div>
+                <div class="stat-box">
+                  <span class="stat-box-label">Snapshots Logged</span>
+                  <span class="stat-box-val text-accent" id="repTotalCount">1</span>
+                </div>
+                <div class="stat-box">
+                  <span class="stat-box-label">Dynamic Scalp Rule</span>
+                  <span class="stat-box-val text-warning">+$60 TP / -$35 SL</span>
+                </div>
+                <div class="stat-box">
+                  <span class="stat-box-label">Audit Cadence</span>
+                  <span class="stat-box-val">Every 30 Mins</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Timeline of 30-Minute Snapshot Cards -->
+            <div class="reports-timeline" id="reportsTimelineContainer">
+              <div class="loading-spinner">Loading 30-Minute Executive Snapshots...</div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

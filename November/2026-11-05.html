@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project AVI // November Sprint - 2026-11-05</title>
+<style>
+  :root {
+    --bg-main: #0B0E14;
+    --bg-card: #151922;
+    --border-color: #262E3D;
+    --accent-blue: #3B82F6;
+    --accent-cyan: #06B6D4;
+    --accent-green: #10B981;
+    --accent-red: #EF4444;
+    --text-primary: #F3F4F6;
+    --text-secondary: #9CA3AF;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg-main);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 24px;
+    line-height: 1.5;
+  }
+  .container { max-width: 1100px; margin: 0 auto; }
+  .header {
+    background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    background: rgba(59, 130, 246, 0.2);
+    color: var(--accent-blue);
+    border: 1px solid var(--accent-blue);
+    margin-bottom: 10px;
+  }
+  h1 { font-size: 1.8rem; margin-bottom: 6px; }
+  .sub { color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 12px; }
+  .founders { color: var(--accent-cyan); font-weight: 600; font-size: 0.9rem; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 18px; }
+  .label { font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 4px; }
+  .val { font-size: 1.4rem; font-weight: 800; }
+  .green { color: var(--accent-green); }
+  .red { color: var(--accent-red); }
+  .section { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+  .sec-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; }
+  ul { padding-left: 20px; }
+  li { margin-bottom: 6px; color: var(--text-secondary); }
+  li strong { color: var(--text-primary); }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="badge">06:00 AM Session Cutoff Report</div>
+    <h1>Project AVI // November Sprint &mdash; 2026-11-05</h1>
+    <div class="sub">Autonomous 06:00 AM IST Session Cutoff &amp; Daily Wrap-up Dossier</div>
+    <div class="founders">Avinash &amp; Nova // Project AVI Founders</div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="label">Balance at 06:00 AM</div>
+      <div class="val">$99,469.38</div>
+    </div>
+    <div class="card">
+      <div class="label">Equity at 06:00 AM</div>
+      <div class="val">$99,469.38</div>
+    </div>
+    <div class="card">
+      <div class="label">Session P&L Delta</div>
+      <div class="val green">$+179.95 USD</div>
+    </div>
+    <div class="card">
+      <div class="label">06:00 AM Flatten Status</div>
+      <div class="val green">FLATTENED</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="sec-title">🛑 06:00 AM Market Flatten Execution</div>
+    <p style="color: var(--text-secondary); margin-bottom: 8px;">Per executive mandate, all open market exposure was closed at 06:00 AM IST to bank profits and protect capital.</p>
+    <ul>
+      <li>[FLATTENED] #577675141 GBPUSD 0.25 lots @ 1.34821</li><li>[FLATTENED] #577691654 EURUSD 0.25 lots @ 1.12403</li><li>[FLATTENED] #577768766 SOLUSD 0.19 lots @ 95.82</li><li>[FLATTENED] #577797270 ETHUSD 0.22 lots @ 2427.34</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="sec-title">📋 Strict Rule Compliance</div>
+    <ul>
+      <li><strong>Max Loss Rule:</strong> -$35.00 hard cap strictly enforced. Zero trades allowed to exceed risk budget.</li>
+      <li><strong>Breathing Room:</strong> 2.4x ATR institutional stops active.</li>
+      <li><strong>Profit Lock Floors:</strong> +$14.00 cash floor locked at +$28.00; +$28.00 floor locked at +$45.00.</li>
+      <li><strong>Next Session:</strong> Resumes according to scheduled market hours.</li>
+    </ul>
+  </div>
+</div>
+</body>
+</html>

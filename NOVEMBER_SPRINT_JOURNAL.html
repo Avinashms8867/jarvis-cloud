@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project AVI // No-Miss November Founder Sprint Journal</title>
+<style>
+  :root {
+    --bg-main: #0B0E14;
+    --bg-card: #151922;
+    --border-color: #262E3D;
+    --accent-blue: #3B82F6;
+    --accent-cyan: #06B6D4;
+    --accent-green: #10B981;
+    --accent-yellow: #F59E0B;
+    --accent-red: #EF4444;
+    --text-primary: #F3F4F6;
+    --text-secondary: #9CA3AF;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg-main);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.5;
+    padding: 24px;
+  }
+  .container { max-width: 1200px; margin: 0 auto; }
+  .header-card {
+    background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 28px;
+    margin-bottom: 24px;
+  }
+  .badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    background: rgba(16, 185, 129, 0.2);
+    color: var(--accent-green);
+    border: 1px solid var(--accent-green);
+    margin-bottom: 12px;
+  }
+  h1 { font-size: 2rem; font-weight: 800; margin-bottom: 8px; }
+  .subtitle { font-size: 1rem; color: var(--text-secondary); margin-bottom: 16px; }
+  .founders { font-size: 0.95rem; color: var(--accent-cyan); font-weight: 600; }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 20px;
+  }
+  .stat-label { font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 6px; font-weight: 600; }
+  .stat-val { font-size: 1.5rem; font-weight: 800; }
+  .stat-sub { font-size: 0.8rem; margin-top: 4px; color: var(--text-secondary); }
+  .green { color: var(--accent-green); }
+
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .card-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: #FFFFFF;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 12px;
+  }
+
+  table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.9rem; }
+  th { text-align: left; padding: 12px 14px; background: #1A202C; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; font-size: 0.75rem; border-bottom: 2px solid var(--border-color); }
+  td { padding: 12px 14px; border-bottom: 1px solid var(--border-color); }
+  tr:hover { background: rgba(255, 255, 255, 0.02); }
+
+  .badge-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+  .tag-green { background: rgba(16, 185, 129, 0.2); color: var(--accent-green); border: 1px solid rgba(16, 185, 129, 0.4); }
+  .tag-yellow { background: rgba(245, 158, 11, 0.2); color: var(--accent-yellow); border: 1px solid rgba(245, 158, 11, 0.4); }
+
+  ul { padding-left: 20px; }
+  li { margin-bottom: 8px; color: var(--text-secondary); }
+  li strong { color: var(--text-primary); }
+
+  .footer {
+    text-align: center;
+    padding: 24px;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    border-top: 1px solid var(--border-color);
+    margin-top: 32px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header-card">
+    <div class="badge">Master Sprint Dashboard // Days 1 &ndash; 30</div>
+    <h1>Project AVI // No-Miss November Founder Sprint</h1>
+    <div class="subtitle">Executive 30-Day Master Scoreboard &bull; <strong>Target: +$5,000.00 (+5.0% to $105,000.00)</strong></div>
+    <div class="founders">Co-Founders: Avinash (Chief Capital Officer) &bull; Nova (Chief Technology Officer)</div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Verified Balance</div>
+      <div class="stat-val green">$99,469.38</div>
+      <div class="stat-sub">Target: $105,000.00 (+5.0%)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Verified Equity</div>
+      <div class="stat-val green">$99,469.38</div>
+      <div class="stat-sub">Drawdown Buffer: $4,469.38 (89.4%)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">06:00 AM Flatten</div>
+      <div class="stat-val green">100% FLAT</div>
+      <div class="stat-sub">Zero unmanaged exposure</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Broker Link</div>
+      <div class="stat-val green">CONNECTED</div>
+      <div class="stat-sub">#1515102715 Active</div>
+      <a href="November/2026-11-06.html" class="dossier-card">
+        <div class="day-num">DAY 06 &bull; NOV 06</div>
+        <div class="dossier-title">06:00 AM Session Cutoff &amp; Multi-Asset Handover</div>
+        <div class="dossier-pnl red">-$113.45 Session // +$66.50 Cum.</div>
+        <div class="dossier-meta">Status: 100% Flattened &bull; Gate 0B Locked</div>
+      </a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📅 30-Day Sprint Cumulative Scoreboard</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Day</th>
+          <th>Date</th>
+          <th>Account Balance</th>
+          <th>Account Equity</th>
+          <th>Daily Realized P&L</th>
+          <th>Tracked Setups P&L</th>
+          <th>Cumulative Sprint P&L</th>
+          <th>Key Breakthrough / Major Event</th>
+          <th>Day Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>01</strong></td>
+          <td><strong>2026-11-01</strong></td>
+          <td><strong>$99,289.43</strong></td>
+          <td><strong>$99,284.39</strong></td>
+          <td>$0.00 (Broker Maint)</td>
+          <td class="green"><strong>+$28.00 Cash</strong></td>
+          <td>$0.00 FTMO / +$28.00 Sim</td>
+          <td>Fixed 5-cent choke; deployed 2.4x ATR stops &amp; +$14/+ $28 Cash Floors</td>
+          <td><span class="badge-tag tag-green">Complete</span></td>
+        </tr>
+        <tr>
+          <td><strong>02</strong></td>
+          <td><strong>2026-11-02</strong></td>
+          <td><strong>$99,346.74</strong></td>
+          <td><strong>$99,346.74</strong></td>
+          <td class="green"><strong>+$57.31 USD</strong></td>
+          <td>Holding Flat</td>
+          <td class="green"><strong>+$57.31 FTMO</strong></td>
+          <td>EURUSD hit TP (+ $57.31); Broker Bridge Re-Authorized &amp; 100% Live</td>
+          <td><span class="badge-tag tag-green">Complete</span></td>
+        </tr>
+        <tr>
+          <td><strong>03</strong></td>
+          <td><strong>2026-11-03</strong></td>
+          <td><strong>$99,346.74</strong></td>
+          <td><strong>$99,346.74</strong></td>
+          <td>$0.00 (06:00 AM Flat)</td>
+          <td>Holding Flat</td>
+          <td class="green"><strong>+$57.31 FTMO</strong></td>
+          <td>06:00 AM Flatten Enforced; Capital 100% Preserved; Live Pipeline Armed</td>
+          <td><span class="badge-tag tag-green">Active Handover</span></td>
+        </tr>
+        <tr>
+          <td><strong>04</strong></td>
+          <td><strong>2026-11-04</strong></td>
+          <td><strong>$99,452.07</strong></td>
+          <td><strong>$99,452.07</strong></td>
+          <td class="green"><strong>+$105.33 USD</strong></td>
+          <td>100% Flat at 06:00 AM</td>
+          <td class="green"><strong>+$162.64 FTMO</strong></td>
+          <td>Multi-Asset Run: BTC TP (+$61.37), GBP TP (+$61.87), ETH (+$25.97), SOL (+$29.45); 06:00 AM Flatten</td>
+          <td><span class="badge-tag tag-green">Complete</span></td>
+        </tr>
+        <tr>
+          <td><strong>05</strong></td>
+          <td><strong>2026-11-05</strong></td>
+          <td><strong>$99,469.38</strong></td>
+          <td><strong>$99,469.38</strong></td>
+          <td class="green"><strong>+$17.31 USD</strong></td>
+          <td>100% Flat at 06:00 AM</td>
+          <td class="green"><strong>+$179.95 FTMO</strong></td>
+          <td>Overnight Run: EURUSD Flatten (+$45.37), GBP Flatten (+$21.12), ETH Trail (+$12.24); 06:00 AM Flatten Enforced</td>
+          <td><span class="badge-tag tag-green">Complete</span></td>
+        </tr>
+        <tr>
+          <td><strong>06</strong></td>
+          <td><strong>2026-11-06</strong></td>
+          <td><strong>$99,355.93</strong></td>
+          <td><strong>$99,355.93</strong></td>
+          <td class="red"><strong>-$113.45 USD</strong></td>
+          <td>100% Flat at 06:00 AM</td>
+          <td class="green"><strong>+$66.50 FTMO</strong></td>
+          <td>Overnight Multi-Asset: SOL Trail (+$14.06), USDJPY Trail (+$14.10), GBP Flat (+$9.75); 06:00 AM Flatten Enforced</td>
+          <td><span class="badge-tag tag-green">Complete</span></td>
+        </tr>
+        <tr>
+          <td>...</td>
+          <td>...</td>
+          <td>&mdash;</td>
+          <td>&mdash;</td>
+          <td>&mdash;</td>
+          <td>&mdash;</td>
+          <td>&mdash;</td>
+          <td>Pending</td>
+          <td><span class="badge-tag tag-yellow">Scheduled</span></td>
+        </tr>
+        <tr>
+          <td><strong>30</strong></td>
+          <td><strong>2026-11-30</strong></td>
+          <td>&mdash;</td>
+          <td>&mdash;</td>
+          <td>&mdash;</td>
+          <td>&mdash;</td>
+          <td>&mdash;</td>
+          <td>Goal Target: $105,000.00 (+5.0%)</td>
+          <td><span class="badge-tag tag-yellow">Final Goal</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📁 Daily Dossier HTML Archive (November Folder)</div>
+    <ul>
+      <li><a href="November/2026-11-01.html" style="color: var(--accent-cyan); font-weight: 600;">Day 1: 2026-11-01.html</a> &mdash; Baseline metrics, 2.4x ATR architecture patch, +$28.00 cash banked.</li>
+      <li><a href="November/2026-11-02.html" style="color: var(--accent-cyan); font-weight: 600;">Day 2: 2026-11-02.html</a> &mdash; EURUSD Take Profit fill (+ $57.13 net cash), FTMO re-authorized.</li>
+      <li><a href="November/2026-11-03.html" style="color: var(--accent-cyan); font-weight: 600;">Day 3: 2026-11-03.html</a> &mdash; 06:00 AM Session Cutoff, 100% Flat handover, live pipeline armed.</li>
+      <li><a href="November/2026-11-04.html" style="color: var(--accent-cyan); font-weight: 600;">Day 4: 2026-11-04.html</a> &mdash; Overnight Multi-Asset Run (+$105.33 banked), BTC/GBP hit TP, 06:00 AM 100% Flattened.</li>
+      <li><a href="November/2026-11-05.html" style="color: var(--accent-cyan); font-weight: 600;">Day 5: 2026-11-05.html</a> &mdash; Overnight Multi-Asset Run (+$17.31 banked), EURUSD (+$45.37), 06:00 AM 100% Flattened.</li>
+    </ul>
+  </div>
+
+  <div class="footer">
+    Project AVI // Autonomous Venture Intelligence &bull; No-Miss November Founder Sprint<br>
+    Co-Founders: Avinash &amp; Nova &bull; Strictly Adhering to the -$35.00 Max Risk Rule
+  </div>
+</div>
+</body>
+</html>

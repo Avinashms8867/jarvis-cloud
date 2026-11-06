@@ -1,0 +1,520 @@
+"""
+PROJECT AVI // AGENT 2 THINKING CORE
+Persistent cognitive engine with Multi-Timeframe Alignment and Breakeven Trailing:
+- Ingests 1h macro klines (50/200 EMA) and 5m execution klines
+- Dynamic position management: Moves to Breakeven at +1.0R, trails at +2.0R
+- Commits empirical lessons and multi-hop graph edges into Dual Neo4j
+"""
+
+from __future__ import annotations
+import os
+import json
+
+import logging
+import time
+import threading
+from datetime import datetime
+from typing import List, Dict, Any, Optional
+import numpy as np
+
+from tier2_cortex.dialectical_debater import DialecticalDebater
+from tier3_evolution.market_feed import MarketDataFeed
+from tier3_evolution.fast_simulator import calculate_rsi, calculate_atr, calculate_ema
+
+logger = logging.getLogger("avi.tier2.thinking")
+
+
+class PaperPortfolio:
+    """Simulated execution engine with multi-phase breakeven trailing stops and friction deductions."""
+
+    def __init__(self, initial_capital: float = 10000.0):
+        self.initial_capital = initial_capital
+        self.capital = initial_capital
+        self.open_positions: List[Dict[str, Any]] = []
+        self.closed_trades: List[Dict[str, Any]] = []
+        self._lock = threading.Lock()
+
+    def open_trade(self, order: Dict[str, Any]) -> Dict[str, Any]:
+        with self._lock:
+            for p in self.open_positions:
+                if p["symbol"] == order["symbol"]:
+                    return p
+
+            sl_dist = order["sl_dist"]
+            position = {
+                "id": f"pos_{int(time.time() * 1000)}",
+                "symbol": order["symbol"],
+                "side": order["side"],
+                "entry_price": order["entry"],
+                "curr_price": order["entry"],
+                "sl": order["sl"],
+                "initial_sl": order["sl"],
+                "tp": order["tp"],
+                "sl_dist": sl_dist,
+                "atr": order["atr"],
+                "htf_regime": order.get("htf_regime", "UNKNOWN"),
+                "size_units": round(500.0 / order["entry"], 4),  # $500 fixed notional
+                "unrealized_pnl": 0.0,
+                "status": "ACTIVE_1R_RISK",  # "ACTIVE_1R_RISK" | "BREAKEVEN_LOCKED" | "TRAILING_PROFIT"
+                "opened_at": datetime.utcnow().strftime("%H:%M:%S")
+            }
+            self.open_positions.append(position)
+            return position
+
+    def update_price(self, symbol: str, curr_price: float) -> List[Dict[str, Any]]:
+        closed = []
+        fee_rate = 0.0005  # 0.05% taker fee per side
+
+        with self._lock:
+            remaining = []
+            for p in self.open_positions:
+                if p["symbol"] != symbol:
+                    remaining.append(p)
+                    continue
+
+                p["curr_price"] = curr_price
+                side = p["side"]
+                entry = p["entry_price"]
+                sl = p["sl"]
+                tp = p["tp"]
+                units = p["size_units"]
+                sl_dist = p["sl_dist"]
+
+                if side == "LONG":
+                    gross_pnl = (curr_price - entry) * units
+                    fees = (entry * fee_rate * units) + (curr_price * fee_rate * units)
+                    pnl = gross_pnl - fees
+
+                    # Stop Loss
+                    if curr_price <= sl:
+                        p["closed_at"] = datetime.utcnow().strftime("%H:%M:%S")
+                        p["realized_pnl"] = round(pnl, 2)
+                        p["exit_reason"] = "STOP_LOSS" if p["status"] == "ACTIVE_1R_RISK" else "BREAKEVEN_EXIT"
+                        self.capital += pnl
+                        self.closed_trades.append(p)
+                        closed.append(p)
+                        continue
+
+                    # Take Profit
+                    elif curr_price >= tp:
+                        p["closed_at"] = datetime.utcnow().strftime("%H:%M:%S")
+                        p["realized_pnl"] = round(pnl, 2)
+                        p["exit_reason"] = "TAKE_PROFIT"
+                        self.capital += pnl
+                        self.closed_trades.append(p)
+                        closed.append(p)
+                        continue
+
+                    # Breakeven Step 1: When price advances by +1.0R (1.0 * sl_dist)
+                    elif curr_price >= entry + sl_dist and p["status"] == "ACTIVE_1R_RISK":
+                        p["sl"] = round(entry + (entry * 0.001), 2)  # Breakeven + fee buffer
+                        p["status"] = "BREAKEVEN_LOCKED"
+
+                    # Trailing Step 2: When price advances by +2.0R
+                    elif curr_price >= entry + (2.0 * sl_dist) and p["status"] != "TRAILING_PROFIT":
+                        p["sl"] = round(entry + (1.2 * sl_dist), 2)  # Lock in +1.2R
+                        p["status"] = "TRAILING_PROFIT"
+
+                elif side == "SHORT":
+                    gross_pnl = (entry - curr_price) * units
+                    fees = (entry * fee_rate * units) + (curr_price * fee_rate * units)
+                    pnl = gross_pnl - fees
+
+                    # Stop Loss
+                    if curr_price >= sl:
+                        p["closed_at"] = datetime.utcnow().strftime("%H:%M:%S")
+                        p["realized_pnl"] = round(pnl, 2)
+                        p["exit_reason"] = "STOP_LOSS" if p["status"] == "ACTIVE_1R_RISK" else "BREAKEVEN_EXIT"
+                        self.capital += pnl
+                        self.closed_trades.append(p)
+                        closed.append(p)
+                        continue
+
+                    # Take Profit
+                    elif curr_price <= tp:
+                        p["closed_at"] = datetime.utcnow().strftime("%H:%M:%S")
+                        p["realized_pnl"] = round(pnl, 2)
+                        p["exit_reason"] = "TAKE_PROFIT"
+                        self.capital += pnl
+                        self.closed_trades.append(p)
+                        closed.append(p)
+                        continue
+
+                    # Breakeven Step 1: When price advances down by +1.0R
+                    elif curr_price <= entry - sl_dist and p["status"] == "ACTIVE_1R_RISK":
+                        p["sl"] = round(entry - (entry * 0.001), 2)
+                        p["status"] = "BREAKEVEN_LOCKED"
+
+                    # Trailing Step 2: When price advances down by +2.0R
+                    elif curr_price <= entry - (2.0 * sl_dist) and p["status"] != "TRAILING_PROFIT":
+                        p["sl"] = round(entry - (1.2 * sl_dist), 2)
+                        p["status"] = "TRAILING_PROFIT"
+
+                p["unrealized_pnl"] = round(pnl, 2)
+                remaining.append(p)
+
+            self.open_positions = remaining
+        return closed
+
+    def get_summary(self) -> Dict[str, Any]:
+        with self._lock:
+            wins = sum(1 for t in self.closed_trades if t.get("realized_pnl", 0) > 0)
+            total = len(self.closed_trades)
+            win_rate = round((wins / total * 100), 1) if total > 0 else 0.0
+            total_realized = sum(t.get("realized_pnl", 0) for t in self.closed_trades)
+            return {
+                "capital": round(self.capital, 2),
+                "initial_capital": self.initial_capital,
+                "total_trades": total,
+                "wins": wins,
+                "win_rate": win_rate,
+                "total_realized_pnl": round(total_realized, 2),
+                "open_count": len(self.open_positions),
+                "open_positions": list(self.open_positions),
+                "recent_trades": list(reversed(self.closed_trades[-8:]))
+            }
+
+
+class Agent2ThinkingCore:
+    """Agent 2 Thinking Core with Multi-Timeframe Alignment and Dual Neo4j Memory."""
+
+    def __init__(self, memory_engine=None, swarm_engine=None, ftmo_bridge=None, live_ftmo: bool = True):
+        self.memory = memory_engine
+        self.swarm = swarm_engine
+        self.ftmo_bridge = ftmo_bridge
+        self.live_ftmo = live_ftmo
+        self.step_counter = self._load_step_from_neo4j()
+        self.is_thinking = True
+        self.thought_history: List[Dict[str, Any]] = []
+        self.active_signals: List[Dict[str, Any]] = []
+        self.portfolio = PaperPortfolio()
+        self._lock = threading.Lock()
+        self._thread: Optional[threading.Thread] = None
+
+    def start(self, interval_seconds: int = 10) -> None:
+        if self._thread and self._thread.is_alive():
+            return
+        self.is_thinking = True
+        self._thread = threading.Thread(target=self._thinking_loop, args=(interval_seconds,), daemon=True)
+        self._thread.start()
+        logger.info(f"[COGITATION] Agent 2 Thinking Core online (cycle interval: {interval_seconds}s).")
+
+    def stop(self) -> None:
+        self.is_thinking = False
+
+    def _thinking_loop(self, interval: int) -> None:
+        while self.is_thinking:
+            try:
+                self.execute_thought_cycle()
+            except Exception as e:
+                logger.error(f"Error in thinking cycle: {e}")
+            time.sleep(interval)
+
+    def _load_step_from_neo4j(self) -> int:
+        """Queries Neo4j directly for the highest recorded cogitation step."""
+        if self.memory and hasattr(self.memory, "get_latest_thought_step"):
+            try:
+                step = self.memory.get_latest_thought_step()
+                if step > 1:
+                    logger.info(f"[CORTEX] Directly loaded Cogitation Step {step} from Neo4j.")
+                    return step
+            except Exception as e:
+                logger.warning(f"[CORTEX] Could not load step from Neo4j: {e}")
+        return 1
+
+    def execute_thought_cycle(self) -> Dict[str, Any]:
+        """
+        Full 7-phase cognitive iteration:
+        1. Multi-Timeframe Perception (1h Macro Trend + 5m Execution Klines)
+        2. Swarm Synthesis (Multi-strategy chromosomes from Agent 3)
+        3. Neo4j Graph Associative Recall (Matching regime lessons)
+        4. Dialectical Debate (Bull vs. Bear vs. Risk Governor with HTF Trend Law)
+        5. Claude-Style Monologue Generation
+        6. Paper Portfolio Management (Breakeven & Trailing stops)
+        7. Dual Neo4j Persistence
+        """
+        symbols = ["ETHUSDT", "SOLUSDT", "EURUSD", "GBPUSD", "USDJPY", "BTCUSDT"]
+        sym = symbols[(self.step_counter - 1) % len(symbols)]
+        # BTC rotation active without restriction
+        now_str = datetime.utcnow().strftime("%H:%M:%S")
+
+        # 0. Live MT5 Breakeven & Trailing Management (+1.0R to Breakeven, +2.0R TP)
+        if self.live_ftmo and self.ftmo_bridge:
+            try:
+                self.ftmo_bridge.manage_active_positions()
+            except Exception as e:
+                logger.warning(f"Position management error: {e}")
+
+        # ---------------- 1. MULTI-TIMEFRAME PERCEPTION ----------------
+        # 1A. Fetch 5m execution klines
+        df_5m = MarketDataFeed.get_klines(sym, interval="5m", limit=100)
+        closes_5m = df_5m["close"].values
+        opens_5m = df_5m["open"].values
+        highs_5m = df_5m["high"].values
+        lows_5m = df_5m["low"].values
+        curr_price = float(closes_5m[-1])
+        curr_open_5m = float(opens_5m[-1]) if len(opens_5m) > 0 else curr_price
+        candle_is_green_5m = curr_price >= curr_open_5m
+
+        rsi_vals = calculate_rsi(closes_5m, 14)
+        atr_vals = calculate_atr(highs_5m, lows_5m, closes_5m, 14)
+        curr_rsi = float(rsi_vals[-1])
+        curr_atr = float(atr_vals[-1])
+
+        # 1B. Fetch 15m intermediate structure klines (Angle 2)
+        try:
+            df_15m = MarketDataFeed.get_klines(sym, interval="15m", limit=100)
+            closes_15m = df_15m["close"].values
+            ema20_15m_arr = calculate_ema(closes_15m, 20)
+            ema50_15m_arr = calculate_ema(closes_15m, 50)
+            rsi_15m_arr = calculate_rsi(closes_15m, 14)
+            curr_ema20_15m = float(ema20_15m_arr[-1]) if len(ema20_15m_arr) > 0 else curr_price
+            curr_ema50_15m = float(ema50_15m_arr[-1]) if len(ema50_15m_arr) > 0 else curr_price
+            curr_rsi_15m = float(rsi_15m_arr[-1]) if len(rsi_15m_arr) > 0 else 50.0
+
+            if closes_15m[-1] > curr_ema50_15m and curr_ema20_15m >= curr_ema50_15m:
+                structure_15m = "15m_STRUCTURE_BULL"
+                structure_15m_desc = f"15m Bullish Structure: Price ({closes_15m[-1]:.4f}) > 50 EMA ({curr_ema50_15m:.4f}), RSI: {curr_rsi_15m:.1f}."
+            elif closes_15m[-1] < curr_ema50_15m and curr_ema20_15m <= curr_ema50_15m:
+                structure_15m = "15m_STRUCTURE_BEAR"
+                structure_15m_desc = f"15m Bearish Structure: Price ({closes_15m[-1]:.4f}) < 50 EMA ({curr_ema50_15m:.4f}), RSI: {curr_rsi_15m:.1f}."
+            else:
+                structure_15m = "15m_STRUCTURE_CHOP"
+                structure_15m_desc = f"15m Equilibrium/Chop: 20/50 EMA compressing, RSI: {curr_rsi_15m:.1f}."
+        except Exception:
+            structure_15m = "15m_STRUCTURE_CHOP"
+            structure_15m_desc = "15m klines unavailable; conservative stance."
+            curr_ema20_15m = curr_price
+            curr_ema50_15m = curr_price
+            curr_rsi_15m = 50.0
+
+        # 1C. Fetch 1h macro trend klines (Angle 1)
+        try:
+            df_1h = MarketDataFeed.get_klines(sym, interval="1h", limit=300)
+            closes_1h = df_1h["close"].values
+            ema50_1h = calculate_ema(closes_1h, 50)
+            ema200_1h = calculate_ema(closes_1h, 200)
+            curr_ema50_1h = float(ema50_1h[-1]) if (len(ema50_1h) > 0 and ema50_1h[-1] > 0) else curr_price
+            curr_ema200_1h = float(ema200_1h[-1]) if (len(ema200_1h) > 0 and ema200_1h[-1] > 0) else curr_ema50_1h
+
+            is_bull_stack = (curr_ema50_1h > curr_ema200_1h) and (curr_price >= curr_ema200_1h * 0.998)
+            is_bear_stack = (curr_ema50_1h < curr_ema200_1h) and (curr_price <= curr_ema200_1h * 1.002)
+
+            if is_bull_stack:
+                htf_regime = "1h_MACRO_BULL"
+                htf_desc = f"Macro Bull Trend: 50 EMA ({curr_ema50_1h:.4f}) > 200 EMA ({curr_ema200_1h:.4f}) & Price (${curr_price:.4f}) holding above baseline support. Value pullbacks prioritized."
+            elif is_bear_stack:
+                htf_regime = "1h_MACRO_BEAR"
+                htf_desc = f"Macro Bear Trend: 50 EMA ({curr_ema50_1h:.4f}) < 200 EMA ({curr_ema200_1h:.4f}) & Price (${curr_price:.4f}) below baseline. Relief rallies prioritized."
+            else:
+                htf_regime = "1h_MACRO_CHOP"
+                htf_desc = f"Macro Consolidation: EMAs flat or price out of trend alignment. Capital preservation active." 
+        except Exception:
+            htf_regime = "1h_MACRO_CHOP"
+            htf_desc = "1h klines unavailable; enforcing conservative chop defense."
+            curr_ema50_1h = curr_price
+            curr_ema200_1h = curr_price
+
+        # 5m Regime classification
+        if curr_atr < curr_price * 0.0020:
+            regime_5m = "LowVolatilityCompression"
+            regime_desc = "Narrow range consolidation. High probability of chop traps."
+        elif curr_rsi > 68:
+            regime_5m = "OverboughtExhaustion"
+            regime_desc = "RSI extended into upper exhaustion envelope."
+        elif curr_rsi < 32:
+            regime_5m = "OversoldExhaustion"
+            regime_desc = "RSI compressed in capitulation zone."
+        else:
+            regime_5m = "NeutralDrift"
+            regime_desc = "Equilibrium order flow."
+
+        # Update paper portfolio prices
+        closed_trades = self.portfolio.update_price(sym, curr_price)
+        for ct in closed_trades:
+            if self.memory:
+                pnl = ct.get("realized_pnl", 0)
+                outcome = "WIN" if pnl > 0 else "LOSS"
+                self.memory.save_lesson(
+                    takeaway=f"{sym} {ct['side']} exited at {ct['exit_reason']} with ${pnl:+.2f} net PnL.",
+                    context=f"Entry: ${ct['entry_price']:.2f}, SL: ${ct['sl']:.2f}, TP: ${ct['tp']:.2f}, HTF: {ct.get('htf_regime')}",
+                    win_rate=100.0 if outcome == "WIN" else 0.0,
+                    sample_size=1,
+                    regime=htf_regime
+                )
+
+        # ---------------- 2. SWARM ASSIMILATION ----------------
+        swarm_insight = "Agent 3 Swarm initializing tournament."
+        champion_dna = "TREND_PULLBACK | SL=1.8xATR | TP=3.6xATR"
+        culled_summary = "Swarm pruning negative-expectancy chromosomes."
+        if self.swarm and self.swarm.population:
+            top_agent = self.swarm.population[0]
+            champion_dna = top_agent.to_dna_string()
+            swarm_insight = (
+                f"Gen {self.swarm.generation} Swarm Leader [{top_agent.agent_id}]: {champion_dna} "
+                f"(Trades: {top_agent.trades_count}, Win Rate: {top_agent.win_rate}%, Expectancy: ${top_agent.expectancy:.2f}/t, Profit Factor: {top_agent.profit_factor})."
+            )
+            culled_agents = [a for a in self.swarm.population if a.status == "culled"]
+            if culled_agents:
+                loser = culled_agents[0]
+                culled_summary = (
+                    f"Culled Post-Mortem [{loser.agent_id}]: DNA ({loser.to_dna_string()}) "
+                    f"failed with {loser.win_rate}% win rate and ${loser.expectancy:.2f}/t net expectancy after 0.05% fees."
+                )
+
+        # ---------------- 3. ASSOCIATIVE MEMORY RECALL ----------------
+        past_lessons = []
+        if self.memory:
+            past_lessons = self.memory.query_lessons_by_regime(htf_regime)
+        recalled_lesson_str = "No historical precedents stored yet for this regime."
+        if past_lessons:
+            recalled_lesson_str = f"Recalled prior precedent: {past_lessons[0].get('takeaway', '')}"
+
+        # ---------------- 4. DIALECTICAL DEBATE ----------------
+        cooldown_info = None
+        if self.ftmo_bridge:
+            try:
+                cooldown_info = self.ftmo_bridge.get_cooldown_status(sym)
+            except Exception:
+                cooldown_info = None
+
+        debate = DialecticalDebater.evaluate(
+            symbol=sym,
+            current_price=curr_price,
+            rsi=curr_rsi,
+            atr=curr_atr,
+            champion_dna=champion_dna,
+            regime_5m=regime_5m,
+            htf_regime=htf_regime,
+            htf_ema50=curr_ema50_1h,
+            htf_ema200=curr_ema200_1h,
+            structure_15m=structure_15m,
+            rsi_15m=curr_rsi_15m,
+            ema20_15m=curr_ema20_15m,
+            ema50_15m=curr_ema50_15m,
+            cooldown_info=cooldown_info,
+            candle_is_green_5m=candle_is_green_5m
+        )
+
+        # ---------------- 5. PAPER & LIVE FTMO EXECUTION ----------------
+        live_ftmo_res = None
+        if debate["suggested_order"] and debate["risk_verdict"] == "APPROVED":
+            self.portfolio.open_trade(debate["suggested_order"])
+            signal = {
+                "symbol": sym,
+                "side": debate["consensus"],
+                "price": curr_price,
+                "sl": debate["suggested_order"]["sl"],
+                "tp": debate["suggested_order"]["tp"],
+                "sl_dist": debate["suggested_order"].get("sl_dist", abs(curr_price - debate["suggested_order"]["sl"])),
+                "tp_dist": debate["suggested_order"].get("tp_dist", abs(curr_price - debate["suggested_order"]["tp"])),
+                "rr_ratio": debate["suggested_order"]["rr_ratio"],
+                "htf_regime": htf_regime,
+                "timestamp": now_str
+            }
+            self.active_signals = [signal]
+
+            # Route to live FTMO MT5 if armed
+            if self.live_ftmo and self.ftmo_bridge:
+                try:
+                    live_ftmo_res = self.ftmo_bridge.execute_order(signal)
+                    if live_ftmo_res and live_ftmo_res.get("success"):
+                        msg = f"[FTMO LIVE AUTO] Agent 2 executed order #{live_ftmo_res.get('order_id')} on {sym} ({live_ftmo_res.get('volume')} lots)"
+                        print(msg, flush=True)
+                        logger.info(msg)
+                    else:
+                        msg = f"[FTMO LIVE AUTO] Execution result for {sym}: {live_ftmo_res.get('message') if live_ftmo_res else 'No response'}"
+                        print(msg, flush=True)
+                        logger.warning(msg)
+                except Exception as e:
+                    msg = f"[FTMO LIVE AUTO] Execution error: {e}"
+                    print(msg, flush=True)
+                    logger.error(msg)
+        else:
+            self.active_signals = []
+
+        # ---------------- 6. CLAUDE-STYLE MONOLOGUE GENERATION ----------------
+        bull_arg = debate["perspectives"][0]["text"]
+        bear_arg = debate["perspectives"][1]["text"]
+        risk_arg = debate["perspectives"][2]["text"]
+
+        mono_lines = [
+            "### [1. Perception // Multi-Angle Timeframe Triangulation (1H + 15M + 5M)]",
+            f"- Asset: `{sym}` @ **${curr_price:.4f}** | 5m RSI: **{curr_rsi:.1f}** | 5m ATR: **${curr_atr:.4f}** ({((curr_atr/curr_price)*100):.2f}%)",
+            f"- Angle 1 (1-Hour Macro Trend): **{htf_regime}** — *{htf_desc}*",
+            f"- Angle 2 (15-Minute Structure): **{structure_15m}** — *{structure_15m_desc}*",
+            f"- Angle 3 (5-Minute Trigger): `{regime_5m}` — *{regime_desc}*",
+            "",
+            "### [2. Swarm Synthesis // Agent 3 Ingestion]",
+            f"- {swarm_insight}",
+            f"- {culled_summary}",
+            "",
+            "### [3. Neo4j Graph Associative Recall]",
+            f"- Dual Neo4j Query: `MATCH (l:Lesson)-[:APPLIES_TO]->(:MarketRegime {{name: '{htf_regime}'}})`",
+            f"- Graph Precedent: *{recalled_lesson_str}*",
+            "",
+            "### [4. Dialectical Debate Chamber // Multi-Timeframe Law]",
+            f"- **Bull Advocate**: {bull_arg}",
+            f"- **Bear Skeptic**: {bear_arg}",
+            f"- **Risk Governor**: {risk_arg}",
+            "",
+            "### [5. Synthesis & Strategic Action]"
+        ]
+
+        if debate["consensus"] in ("SHORT", "LONG"):
+            order = debate["suggested_order"]
+            takeaway = (
+                f"Conviction Triggered: {debate['consensus']} on {sym} @ ${curr_price:.2f}. "
+                f"SL: ${order['sl']:.2f} | TP: ${order['tp']:.2f} | R:R 1:{order['rr_ratio']:.1f}. "
+                f"Aligned with {htf_regime}."
+            )
+            mono_lines.append(f"**EXECUTION AUTHORIZED**: {takeaway}")
+        else:
+            takeaway = f"Discipline Enforced: Capital preservation on {sym} ({htf_regime}). Risk gate stands down."
+            mono_lines.append(f"**STAND DOWN**: {takeaway}")
+
+        claude_monologue = "\n".join(mono_lines)
+
+        thought_obj = {
+            "step": self.step_counter,
+            "timestamp": now_str,
+            "title": f"Step {self.step_counter}: {sym} // {htf_regime} ({regime_5m})",
+            "symbol": sym,
+            "regime": htf_regime,
+            "regime_5m": regime_5m,
+            "desc": f"Price: ${curr_price:.2f} | 1h: {htf_regime} | RSI: {curr_rsi:.1f} | Consensus: {debate['consensus']}",
+            "takeaway": takeaway,
+            "monologue": claude_monologue,
+            "debate": debate,
+            "portfolio": self.portfolio.get_summary()
+        }
+
+        with self._lock:
+            self.thought_history.append(thought_obj)
+            if len(self.thought_history) > 40:
+                self.thought_history.pop(0)
+
+        # ---------------- 7. DUAL NEO4J PERSISTENCE ----------------
+        if self.memory:
+            try:
+                self.memory.save_thought_trace(
+                    phase=f"Cognitive Step {self.step_counter}",
+                    text=f"{sym} {htf_regime} | Consensus: {debate['consensus']} | Conf: {int(debate['confidence']*100)}%",
+                    takeaway=takeaway,
+                    step_num=self.step_counter,
+                    symbol=sym,
+                    regime=htf_regime
+                )
+            except Exception as e:
+                logger.debug(f"Neo4j save notice: {e}")
+
+        self.step_counter += 1
+        return thought_obj
+
+    def get_recent_thoughts(self) -> List[Dict[str, Any]]:
+        with self._lock:
+            return list(self.thought_history)
+
+    def get_latest_thought(self) -> Optional[Dict[str, Any]]:
+        with self._lock:
+            return self.thought_history[-1] if self.thought_history else None

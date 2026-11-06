@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  # ── 1. Project AVI Core Trading Engine & Observatory ──
+  avi-engine:
+    build:
+      context: .
+      dockerfile: Dockerfile.linux
+    container_name: avi-trading-engine
+    restart: unless-stopped
+    ports:
+      - "8888:8888"
+    environment:
+      - LOCAL_NEO4J_URI=bolt://neo4j:7687
+      - LOCAL_NEO4J_USER=neo4j
+      - LOCAL_NEO4J_PASSWORD=${LOCAL_NEO4J_PASSWORD:-tradingpass123}
+      - MT5_BRIDGE_HOST=mt5-wine
+      - MT5_BRIDGE_PORT=8001
+      - REPORTS_DIR=/app/reports
+      - FTMO_MT5_LOGIN=${FTMO_MT5_LOGIN}
+      - FTMO_MT5_PASSWORD=${FTMO_MT5_PASSWORD}
+      - FTMO_MT5_SERVER=${FTMO_MT5_SERVER:-FTMO-Demo}
+    volumes:
+      - ./reports:/app/reports
+      - ./November:/app/November
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    networks:
+      - avi-net
+
+  # ── 2. Neo4j Knowledge Graph Memory ──
+  neo4j:
+    image: neo4j:5-community
+    container_name: avi-neo4j
+    restart: unless-stopped
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      - NEO4J_AUTH=neo4j/${LOCAL_NEO4J_PASSWORD:-tradingpass123}
+      - NEO4J_PLUGINS=[]
+      - NEO4J_dbms_memory_pagecache_size=256M
+      - NEO4J_dbms_memory_heap_initial__size=256M
+      - NEO4J_dbms_memory_heap_max__size=512M
+    volumes:
+      - neo4j_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - avi-net
+
+  # ── 3. MetaTrader 5 Wine + RPyC Bridge Gateway ──
+  mt5-wine:
+    image: ghcr.io/vancura/metatrader:latest
+    container_name: avi-mt5-wine
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      - MT5_LOGIN=${FTMO_MT5_LOGIN}
+      - MT5_PASSWORD=${FTMO_MT5_PASSWORD}
+      - MT5_SERVER=${FTMO_MT5_SERVER:-FTMO-Demo}
+    volumes:
+      - mt5_data:/config
+    networks:
+      - avi-net
+
+networks:
+  avi-net:
+    driver: bridge
+
+volumes:
+  neo4j_data:
+  mt5_data:
+

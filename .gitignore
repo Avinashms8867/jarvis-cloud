@@ -1,0 +1,27 @@
+# Environment & Secrets (NEVER COMMIT CREDENTIALS)
+.env
+*.env
+!.env.example
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Docker data mounts & volumes
+data/neo4j/
+data/mt5-wine/
+data/
+reports/
+
+# Logs and databases
+*.log
+*.sqlite
+*.db
+
+# OS / Editor artifacts
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.sf/

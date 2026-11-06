@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project AVI // November Sprint - Day 2 (2026-11-02)</title>
+<style>
+  :root {
+    --bg-main: #0B0E14;
+    --bg-card: #151922;
+    --border-color: #262E3D;
+    --accent-blue: #3B82F6;
+    --accent-cyan: #06B6D4;
+    --accent-green: #10B981;
+    --accent-yellow: #F59E0B;
+    --accent-red: #EF4444;
+    --text-primary: #F3F4F6;
+    --text-secondary: #9CA3AF;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg-main);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.5;
+    padding: 24px;
+  }
+  .container { max-width: 1200px; margin: 0 auto; }
+  .header-card {
+    background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 28px;
+    margin-bottom: 24px;
+  }
+  .badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    background: rgba(16, 185, 129, 0.2);
+    color: var(--accent-green);
+    border: 1px solid var(--accent-green);
+    margin-bottom: 12px;
+  }
+  h1 { font-size: 2rem; font-weight: 800; margin-bottom: 8px; }
+  .subtitle { font-size: 1rem; color: var(--text-secondary); margin-bottom: 16px; }
+  .founders { font-size: 0.95rem; color: var(--accent-cyan); font-weight: 600; }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 20px;
+  }
+  .stat-label { font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 6px; font-weight: 600; }
+  .stat-val { font-size: 1.5rem; font-weight: 800; }
+  .stat-sub { font-size: 0.8rem; margin-top: 4px; color: var(--text-secondary); }
+  .green { color: var(--accent-green); }
+
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .card-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: #FFFFFF;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 12px;
+  }
+  table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.9rem; }
+  th { text-align: left; padding: 12px 14px; background: #1A202C; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; font-size: 0.75rem; border-bottom: 2px solid var(--border-color); }
+  td { padding: 12px 14px; border-bottom: 1px solid var(--border-color); }
+  tr:hover { background: rgba(255, 255, 255, 0.02); }
+
+  .callout {
+    background: rgba(16, 185, 129, 0.08);
+    border-left: 4px solid var(--accent-green);
+    padding: 16px;
+    border-radius: 0 8px 8px 0;
+    margin: 16px 0;
+  }
+  .callout-title { font-weight: 700; color: #FFFFFF; margin-bottom: 6px; }
+
+  ul { padding-left: 20px; margin-top: 8px; }
+  li { margin-bottom: 6px; color: var(--text-secondary); }
+  li strong { color: var(--text-primary); }
+
+  .footer {
+    text-align: center;
+    padding: 24px;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    border-top: 1px solid var(--border-color);
+    margin-top: 32px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header-card">
+    <div class="badge">Day 2 // Live Verified Dossier</div>
+    <h1>Project AVI // November Founder Sprint</h1>
+    <div class="subtitle">Daily Operational Report & Financial Scoreboard &mdash; Date: <strong>2026-11-02 (Monday)</strong></div>
+    <div class="founders">Co-Founders: Avinash &amp; Nova &bull; FTMO Broker Bridge: <strong>🟢 100% CONNECTED</strong></div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Verified Balance</div>
+      <div class="stat-val green">$99,346.74</div>
+      <div class="stat-sub">Target: $105,000.00 (+5.0%)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Verified Equity</div>
+      <div class="stat-val green">$99,346.74</div>
+      <div class="stat-sub">Drawdown Buffer: $4,346.74 (86.9%)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Today's Realized Profit</div>
+      <div class="stat-val green">+$57.31 USD</div>
+      <div class="stat-sub">EURUSD Hit Take Profit</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Broker Link</div>
+      <div class="stat-val green">CONNECTED</div>
+      <div class="stat-sub">#1515102715 Authorized</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🎉 1. Confirmed Trade: EURUSD Take Profit Hit (+ $57.31 Cash)</div>
+    <div class="callout">
+      <div class="callout-title">💰 Clean Institutional Execution</div>
+      Our swing position <code>#574840285 EURUSD SELL 0.58 lots</code> hit its target cleanly at <code>1.11558</code> (TP <code>1.11559</code>), locking in <strong>+$58.58 gross profit</strong> ($57.13 net after commission) with zero stop-loss slippage!
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Deal Ticket</th>
+          <th>Order #</th>
+          <th>Asset</th>
+          <th>Volume</th>
+          <th>Entry</th>
+          <th>Exit Rate</th>
+          <th>Gross Profit</th>
+          <th>Net Cash</th>
+          <th>Comment</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>#550753073</strong></td>
+          <td>#574955700</td>
+          <td>EURUSD</td>
+          <td>0.58 lots</td>
+          <td>1.11659</td>
+          <td>1.11558</td>
+          <td class="green">+$58.58</td>
+          <td class="green"><strong>+$57.13</strong></td>
+          <td><code>[tp 1.11559]</code></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🛡️ 2. Systems Armed & Active</div>
+    <ul>
+      <li><strong>Cockpit Observatory UI:</strong> Online at <code>http://localhost:8888/</code> with live MT5 bridge attached.</li>
+      <li><strong>Dialectical Debater (Agent 2):</strong> Live order execution armed with 2.4x ATR stops and dynamic +$14 / +$28 cash profit floors.</li>
+      <li><strong>Risk Budget:</strong> -$35.00 maximum stop cap strictly enforced on every trade.</li>
+      <li><strong>Session Cutoff:</strong> 06:00 AM IST Hard Flatten guard primed.</li>
+    </ul>
+  </div>
+
+  <div class="footer">
+    Project AVI // Autonomous Venture Intelligence &bull; No-Miss November Founder Sprint<br>
+    Co-Founders: Avinash &amp; Nova &bull; Strictly Adhering to the -$35.00 Max Risk Rule
+  </div>
+</div>
+</body>
+</html>
