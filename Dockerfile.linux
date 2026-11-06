@@ -30,7 +30,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pandas==2.2.3 \
     numpy==2.0.2 \
     numba==0.60.0 \
-    mt5linux \
+    mt5linux==0.1.9 \
     rpyc \
     requests \
     urllib3 \
