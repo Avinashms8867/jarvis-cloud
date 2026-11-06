@@ -49,8 +49,6 @@ RUN set -eux; \
     echo "Installed Wine ${v}"; \
     dpkg --compare-versions "${v}" ge 11.6 || { echo "FATAL: Wine ${v} < 11.6 cannot run current MT5 builds"; exit 1; }
 
-# Bake in the RPyC/mt5linux patches that fix_mt5.sh used to apply with `docker exec`
-# (those were lost every time the container was recreated).
-RUN sed -i 's/python3 -m mt5linux.*python.exe \&/$wine_executable python -m rpyc.cli.rpyc_classic --host 0.0.0.0 -p $mt5server_port \&/' /Metatrader/start.sh \
-    && (grep -q "rpyc_classic" /Metatrader/start.sh || echo "WARNING: start.sh RPyC patch did not match this base image") \
-    && pip install --break-system-packages --no-cache-dir --no-deps mt5linux==0.1.9
+# Linux-side launcher for the RPyC bridge (avi-bridge.sh runs `python3 -m mt5linux ... -w wine <python>`).
+# start.sh and avi-bridge.sh are mounted from ./mt5 by docker-compose.yml.
+RUN pip install --break-system-packages --no-cache-dir --no-deps mt5linux==0.1.9

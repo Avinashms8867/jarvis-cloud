@@ -41,6 +41,14 @@ services:
       - WINEDLLOVERRIDES=mscoree=
     volumes:
       - ./data/mt5-wine:/config
+      - ./mt5/start.sh:/Metatrader/start.sh:ro           # image start.sh; step 7 runs avi-bridge.sh
+      - ./mt5/avi-bridge.sh:/Metatrader/avi-bridge.sh:ro # RPyC bridge on 64-bit Python 3.11
+    healthcheck:
+      test: ["CMD-SHELL", "ss -tln | grep -q ':8001 '"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 600s
 
   # 3. AVI / Jarvis Cortex + Swarm + 06:00 AM IST Session Governor
   jarvis-core:
@@ -53,7 +61,7 @@ services:
       neo4j:
         condition: service_healthy
       mt5-wine:
-        condition: service_started
+        condition: service_healthy   # mt5_compat connects once at import; wait for the bridge
     ports:
       - "127.0.0.1:8888:8888"   # Alpha Observatory UI (Change-locked to localhost via SSH tunnel)
     environment:
