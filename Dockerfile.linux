@@ -30,12 +30,14 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pandas==2.2.3 \
     numpy==2.0.2 \
     numba==0.60.0 \
-    mt5linux==0.1.9 \
     rpyc \
     requests \
     urllib3 \
     websockets \
-    python-dotenv
+    python-dotenv && \
+    # mt5linux 0.1.9 declares stale pins (numpy==1.21.4, rpyc==5.0.1, twine...) that conflict with the
+    # versions above; its client only imports rpyc/numpy/pandas/pytz, so install it without deps.
+    pip install --no-cache-dir --no-deps mt5linux==0.1.9
 
 # Copy application files
 COPY . /app
