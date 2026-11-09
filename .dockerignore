@@ -2,5 +2,7 @@
 # data/mt5-wine holds the Wine prefix with files the builder cannot read.
 data/
 .git/
+.env
+*.env
 *.log
 shot.png

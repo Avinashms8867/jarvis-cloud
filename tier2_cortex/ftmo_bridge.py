@@ -38,9 +38,11 @@ class FTMOMT5Bridge:
     def __init__(self, governor: Optional[FTMORuleGovernor] = None):
         self.governor = governor or FTMORuleGovernor(initial_balance=100000.0)
         self.is_connected: bool = False
-        self.login: int = 1515102715
-        self.server: str = "FTMO-Demo"
-        self.password: str = "r!N6G$L9Z"
+        # Credentials come from the environment (docker-compose passes them from .env) or from
+        # AVI Project/.env via _load_credentials(). Never hardcode them: this repo is public.
+        self.login: int = int(os.getenv("FTMO_MT5_LOGIN") or 0)
+        self.server: str = os.getenv("FTMO_MT5_SERVER", "FTMO-Demo")
+        self.password: str = os.getenv("FTMO_MT5_PASSWORD", "")
         self.btc_trades_count: int = 0
         self.BTC_MAX_TRADES: int = 3
         self._load_credentials()

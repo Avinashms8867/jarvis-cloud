@@ -73,6 +73,9 @@ services:
       - MT5_BRIDGE_HOST=mt5-wine
       - MT5_BRIDGE_PORT=8001
       - REPORTS_DIR=/app/reports
+      - FTMO_MT5_LOGIN=${FTMO_MT5_LOGIN:-}
+      - FTMO_MT5_PASSWORD=${FTMO_MT5_PASSWORD:-}
+      - FTMO_MT5_SERVER=${FTMO_MT5_SERVER:-FTMO-Demo}
     volumes:
       - ./reports:/app/reports
       - ./November:/app/November
