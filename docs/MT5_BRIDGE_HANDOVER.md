@@ -62,7 +62,9 @@ jarvis-mt5 (gmag11/metatrader5_vnc:2.3 + Wine 11.10, image avi-mt5:wine11)
 - `jarvis-core` has `depends_on: mt5-wine: service_healthy`.
 
 **Two constraints to keep in mind:**
-- `mt5_compat` creates its connection once, at import. **If `jarvis-mt5` restarts, run `docker compose restart jarvis-core`.** Nothing reconnects automatically.
+- `mt5_compat` creates its connection once, at import. **If `jarvis-mt5` restarts while the stack is running, run `docker compose restart jarvis-core`.** Nothing reconnects automatically.
+  - On a Codespace or Docker restart, the containers restart on their own, without `depends_on` ordering. `entrypoint.sh` therefore waits up to 300 s for `mt5-wine:8001` (commit `b32c4a5`); a cold start takes about 150 s.
+  - Before that commit, the engine gave up after 30 s and booted with `FTMO Connected: False`.
 - `initialize()` returns `(-10005, 'IPC timeout')` whenever the terminal isn't logged in or connected. Check the login first.
 
 ## 3. Health checks
