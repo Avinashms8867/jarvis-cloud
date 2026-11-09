@@ -120,10 +120,36 @@ docker logs jarvis-core 2>&1 | grep -E 'BOOT|ONLINE|FTMO' | tail -10
 | Engine shows FTMO disconnected after an MT5 restart | `docker compose restart jarvis-core` |
 | Nothing on `:8001` | `avi-bridge.sh` retries every 15 s. Check `docker logs jarvis-mt5` for `[avi-bridge]` lines. |
 
-## 4. Open items and cautions
+## 4. Production host: Azure VM (since 2026-11-09)
 
-- **Not 24/7.** The Codespace idle timeout is 30 min; the 240 min default only applies to new Codespaces. Containers and trading don't count as activity. A VPS is needed for continuous running.
-- **Credentials in a public repo.** `tier2_cortex/ftmo_bridge.py` lines 41–43 hardcode the FTMO login and password, and the repo is public. Rotate the password, and move the credentials to `.env` (it is git-ignored and is already read by `_load_credentials`).
-- **Disk.** About 4 GB is free on the Codespace Docker disk. Don't run `fix_mt5.sh` there: it rebuilds the MT5 image, which re-downloads the 6.7 GB base.
-- **Neo4j.** The cloud graph started fresh (Thought, Strategy, Asset and MarketRegime nodes; no Lessons). Migrating the local PC graph is pending.
+The stack now runs 24/7 on an Azure VM. **The Codespace no longer runs anything:** its containers were removed with
+`docker compose down`, and its `data/` folder is kept only as a backup. Never run the stack in two places at once,
+because both would trade account #1515102715.
+
+| | |
+|---|---|
+| VM | `avi-vm`, resource group `avi-rg`, Central India, `Standard_B2als_v2` (2 vCPU, 4 GB), Ubuntu 24.04, 64 GB StandardSSD |
+| Access | `ssh -i ~/.ssh/avi_azure avi@20.219.128.198`. Key auth only; the NSG opens only port 22. |
+| Repo | `~/jarvis-cloud`. Run docker with `sudo`. |
+| Swap | 2 GB `/swapfile`, `vm.swappiness=10` (an emergency net, not RAM) |
+| Secrets | `~/jarvis-cloud/.env`, mode 600. FTMO_MT5_*, NEO4J_PASSWORD and VNC_USER/VNC_PASSWORD (random, VM-only). |
+| MT5 data | `./data/mt5-wine`, copied from the Codespace: prefix, Python 3.11 and the saved FTMO-Demo login |
+| Usage | About 1.8 GB RAM in use, about 2 GB available. Engine about 0.3 GB, MT5 about 0.45 GB, Neo4j about 0.57 GB. |
+
+- **GUI and Observatory:** `ssh -i ~/.ssh/avi_azure -L 3000:127.0.0.1:3000 -L 8888:127.0.0.1:8888 avi@20.219.128.198`,
+  then open http://localhost:3000 (VNC) and http://localhost:8888. Get the VNC password with `grep VNC_ ~/jarvis-cloud/.env`.
+- **The health checks in section 3** work the same on the VM; prefix the docker commands with `sudo`.
+- **`.env` gotcha:** docker compose expands `$VAR` inside `.env` values. The FTMO password contains `$`, so it must be
+  single-quoted (`FTMO_MT5_PASSWORD='...'`). Unquoted, it was silently truncated, and `initialize(login, password, server)`
+  failed with `(-6, 'Terminal: Authorization failed')`, which also logged the terminal out.
+- **Credentials:** since commit `34213c8`, `ftmo_bridge.py` reads FTMO_MT5_* from the environment instead of hardcoded
+  values. **The old password is still in public git history**, so rotate it.
+- **Neo4j on the VM started empty**, with a new random password. Migrate the PC graph here, not to the Codespace.
+
+## 5. Open items and cautions
+
+- **Codespace.** It's no longer used for running the stack. It idles out after 30 min. Its disk was nearly full, so don't run `fix_mt5.sh` there.
+- **Azure credit.** The $100 student credit at about $18/month for the VM lasts about 5 months. When the credit runs out, Azure stops the VM.
+- **Password rotation.** Rotate the FTMO demo password; the old one is in the public git history. After rotating, update `~/jarvis-cloud/.env` on the VM and run `sudo docker compose up -d jarvis-core`.
+- **Neo4j migration.** Migrating the local PC graph to the VM is pending.
 - **Shell pitfall when debugging.** `pkill -f <pattern>` inside `sh -c '...'` matches the shell's own command line and kills it. Kill by PID, or use a `[b]racket` pattern.
