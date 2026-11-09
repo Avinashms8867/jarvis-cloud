@@ -28,7 +28,9 @@ fi
 # Wait for MT5 Wine Bridge if configured
 if [ -n "$MT5_BRIDGE_HOST" ]; then
     echo "[WAIT] Checking MT5 Wine Bridge at ${MT5_BRIDGE_HOST}:${MT5_BRIDGE_PORT:-8001}..."
-    for i in {1..30}; do
+    # Up to 5 min: on a cold start Wine + MT5 + the bridge take ~150 s, and mt5_compat
+    # connects only once at import, so starting early leaves the engine without MT5.
+    for i in {1..300}; do
         if nc -z "$MT5_BRIDGE_HOST" "${MT5_BRIDGE_PORT:-8001}" 2>/dev/null; then
             echo "[ONLINE] MT5 Wine Bridge reachable!"
             break
